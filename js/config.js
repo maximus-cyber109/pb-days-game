@@ -2,13 +2,13 @@
 window.PB_ASSETS = {
   // Card image urls. Use remote, your own, or official assets with PNGs (300x420 or up).
   cards: {
-    LensWarden:    "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/LensWarden.png",
-    "Device-Keeper": "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/Device-Keeper.png",
-    "File-Forger": "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/File-Forger.png",
-    "Crown-Shaper": "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/Crown-Shaper.png",
-    "Blade-Bearer": "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/Blade-Bearer.png",
-    "Tooth-Tyrant": "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/Tooth-Tyrant.png",
-    "Quick-Cloth":  "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/Quick-Cloth.png"
+    LensWarden: "https://email-editor-resources.s3.amazonaws.com/images/82618240/LensWarden.png",
+    "Device-Keeper": "https://email-editor-resources.s3.amazonaws.com/images/82618240/Device-Keeper.png",
+    "File-Forger": "https://email-editor-resources.s3.amazonaws.com/images/82618240/File-Forger.png",
+    "Crown-Shaper": "https://email-editor-resources.s3.amazonaws.com/images/82618240/Crown-Shaper.png",
+    "Blade-Bearer": "https://email-editor-resources.s3.amazonaws.com/images/82618240/Blade-Bearer.png",
+    "Tooth-Tyrant": "https://email-editor-resources.s3.amazonaws.com/images/82618240/Tooth-Tyrant.png",
+    "Quick-Cloth":  "https://email-editor-resources.s3.amazonaws.com/images/82618240/Quick-Cloth.png"
   },
 
   // Clash Royale-like logo or PB Days event logo
