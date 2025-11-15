@@ -1,33 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>PB DAYS Game of Crowns — Reveal!</title>
-  <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/uiverse-buttons.css" />
-  <!-- Load core font -->
+  <link rel="stylesheet" href="css/styles.css"/>
+  <link rel="stylesheet" href="css/uiverse-buttons.css"/>
+  <!-- Open source Clash Royale font -->
   <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
 </head>
 <body>
-  <audio id="bg-music" src=""></audio>
-  <audio id="sfx-reveal" src=""></audio>
-  <audio id="sfx-rare" src=""></audio>
-
-  <img class="logo-main" id="logo-main" src="" alt="PB Days Game of Crowns" />
-
-  <main>
-    <div class="header-section">
-      <h1>PB DAYS: GAME OF CROWNS</h1>
-      <h2 id="card-reveal-hd">Your Cards Are...</h2>
-    </div>
-    <section class="card-deck" id="card-deck"></section>
-    <button class="button" id="view-collection-btn" style="display:none;">
-      <div><div><div>View My Collection & Redeem →</div></div></div>
-    </button>
-  </main>
-
-  <div id="email-modal" class="modal hidden">
+<audio id="bg-music" src="https://cdn.pixabay.com/audio/2023/02/17/audio_126b6fcfac.mp3" loop preload="auto"></audio>
+<audio id="reveal-sfx" src="https://cdn.pixabay.com/audio/2023/02/24/audio_128b4a1e98.mp3" preload="auto"></audio>
+<audio id="rare-sfx" src="https://cdn.pixabay.com/audio/2023/02/20/audio_126c323fea.mp3" preload="auto"></audio>
+<div id="main-wrap">
+  <img id="logo-main" src="https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/Game-of-Crowns-Logo.png"
+       alt="PB Days: Game of Crowns" class="logo-main"/>
+  <div class="header-section">
+    <h1>PB DAYS: GAME OF CROWNS</h1>
+    <h2>Your Cards Are...</h2>
+  </div>
+  <div id="loading-cards" class="loading-cards-state">Loading your cards...</div>
+  <section id="reveal-cards" class="card-deck" style="display:none;"></section>
+  <button class="button" id="view-collection-btn" style="display:none;">
+    <div><div><div>View My Collection & Redeem →</div></div></div>
+  </button>
+</div>
+<div id="email-modal" class="modal hidden">
     <div class="modal-content">
       <h2>Enter Your Email</h2>
       <form id="email-form" onsubmit="submitEmail(event)">
@@ -35,9 +34,14 @@
         <button type="submit" class="button"><div>Continue</div></button>
       </form>
     </div>
-  </div>
-  <script src="js/config.js"></script>
-  <script src="js/reward-logic.js"></script>
-  <script src="js/supabase-client.js"></script>
-  <script src="js/app-index.js"></script>
-</body></html>
+</div>
+<script>
+  // ENV injection is already present on Netlify!
+  // Example in Netlify: window.ENV = { SUPABASE_URL: "...", SUPABASE_KEY: "..." }
+</script>
+<script src="js/config.js"></script>
+<script src="js/reward-logic.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/app-index.js"></script>
+</body>
+</html>
