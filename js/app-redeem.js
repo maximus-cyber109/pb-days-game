@@ -1,127 +1,103 @@
-// Load assets and music
-const PB = window.PB_ASSETS;
-document.getElementById('logo-main').src = PB.logo;
-document.getElementById('bg-music').src = PB.music.bg;
-document.getElementById('sfx-redeem').src = PB.music.reveal;
-document.getElementById('sfx-leader').src = PB.music.rare;
+const RC = window.CR_CONFIG;
+const CARD_NAMES = Object.keys(RC.cards);
 
-// Start bg music
-window.onload = () => {
-  let music = document.getElementById('bg-music');
-  if(music){ music.loop = true; music.volume = 0.13; music.play(); }
-};
+document.getElementById('logo-main').src = RC.logo;
+document.getElementById('bg-music').src = RC.sounds.bg;
+document.getElementById('sfx-redeem').src = RC.sounds.reveal;
+let userEmail = new URLSearchParams(location.search).get('email');
+document.getElementById('col-email').textContent = userEmail ? "for " + userEmail : "";
 
-document.addEventListener('DOMContentLoaded', async function() {
-  const params = new URLSearchParams(window.location.search);
-  let email = params.get('email');
-  if(!email) { location.href = 'index.html'; return; }
+initSupabase();
+if (!window.supabase) {
+  document.getElementById("col-deck").innerHTML = "<span style='color:#fff;'>Could not connect.<br/>Try later.</span>";
+  throw new Error("Supabase not initialized.");
+}
 
-  document.getElementById('email-hd').textContent = email;
-
-  // Init supabase
-  initSupabase();
-
-  // Load user's cards
-  // backend: query cards_earned where customer_email==email, group by card_name, sum(quantity)
-  let {data:cards=[]} = await supabase
+(async function(){
+  // 1. Get all cards user has (from any order)
+  let { data: cards=[] } = await supabase
     .from('cards_earned')
     .select('card_name, is_rare, quantity')
-    .eq('customer_email', email);
+    .eq('customer_email', userEmail);
 
-  // Create card map for count, and Set for unique
-  const cardMap = {}, uniqueCards = new Set();
+  // Count per card, Set for uniques
+  const cardMap = {}, unique = new Set();
   cards.forEach(c=>{
     cardMap[c.card_name] = (cardMap[c.card_name]||0)+(c.quantity||1);
-    uniqueCards.add(c.card_name);
+    unique.add(c.card_name);
   });
 
-  // -- RENDER COLLECTION
-  const allCardNames = Object.keys(PB.cards);
-  const collectionElem = document.getElementById('collection');
-  allCardNames.forEach(name=>{
+  // 2. Render ALL cards as grid (glow or blur/lock):
+  const deckElem = document.getElementById('col-deck');
+  deckElem.innerHTML = '';
+  CARD_NAMES.forEach(name=>{
     let owned = cardMap[name] > 0;
-    let cardDiv = document.createElement('div');
-    cardDiv.className = "card glow";
-    if(!owned) cardDiv.classList.add('locked');
-    // If rare add class
-    if(cards.find(c=>c.card_name==name && c.is_rare)) cardDiv.classList.add('rare');
-
-    // Card image
+    let quant = cardMap[name]||0;
+    let rare = cards.find(c=>c.card_name==name && c.is_rare);
+    let card = document.createElement('div');
+    card.className = "cr-card" + (owned?(rare?" rare":""):" locked");
+    // Image
     let img = document.createElement('img');
-    img.className = 'card-image';
-    img.alt = name;
-    img.src = PB.cards[name];
-    cardDiv.appendChild(img);
-
-    // Card title
-    let title = document.createElement('div');
-    title.className = "card-title";
-    title.textContent = name;
-    cardDiv.appendChild(title);
-
-    // Count badge
-    if(cardMap[name] > 1) {
-      let count = document.createElement('span');
-      count.className = 'card-count';
-      count.textContent = "x"+cardMap[name];
-      cardDiv.appendChild(count);
+    img.className = "cr-image"; img.alt = name; img.src = RC.cards[name]||'';
+    card.appendChild(img);
+    // Name
+    let ttl = document.createElement('div');
+    ttl.className = "cr-card-title";
+    ttl.textContent = name;
+    card.appendChild(ttl);
+    // Badge
+    if(quant>1) {
+      let badge = document.createElement('span');
+      badge.className = "cr-card-count";
+      badge.textContent = "x"+quant;
+      card.appendChild(badge);
     }
-
-    // Lock overlay
-    if(!owned) {
-      let lock = document.createElement('img');
-      lock.src = PB.lockIcon;
-      lock.className = "btn-lock";
-      lock.alt = "locked";
-      cardDiv.appendChild(lock);
+    // Lock overlay for missing
+    if(!owned){
+      let icon = document.createElement('img');
+      icon.className = "lock-icon";
+      icon.src = RC.lockIcon;
+      card.appendChild(icon);
     }
-    collectionElem.appendChild(cardDiv);
+    deckElem.appendChild(card);
   });
 
-  // -- REDEMPTION CTA LOGIC
-  let cta = '';
-  if(uniqueCards.size < 2) {
-    cta = '<div style="padding:2rem;text-align:center;"><span style="font-size:1.8em;opacity:.7;">Collect cards to unlock special rewards!</span></div>';
-  } else if(uniqueCards.size < 7) {
-    cta = `<div style='text-align:center;padding:1.6em;'><strong>${uniqueCards.size}</strong>/7 unique cards found! 
-      <br/>Collect all 7 for special rewards!<br /><span style="font-size:2em">✨</span></div>`;
+  // 3. Redeem CTA
+  const cta = document.getElementById('redeem-cta');
+  if(unique.size < 2){
+    cta.innerHTML = "<div style='padding:2em 0 2em 0;'><span style='font-size:1.4em;'>Collect cards to unlock rewards!</span></div>";
+  } else if(unique.size < 7){
+    cta.innerHTML = `<div style="padding:1.4em;">
+      <strong>${unique.size}/7</strong> unique cards – collect all for special rewards!
+    </div>`;
   } else {
-    cta = `<button class="button" id="redeem-btn"><div><div><div>
-      Redeem All 7 Cards!
-    </div></div></div></button>
-    <p style="margin-top:1.1em;color:#0ea5e9;font-weight:bold;font-size:1.2em;">You unlocked all legendary cards! Click to redeem your Grand Reward.</p>`;
+    cta.innerHTML = `<button class="button cr-btn-lg" id="redeem-btn"><div><div><div>Redeem All 7 Cards!</div></div></div></button>
+    <div style="margin-top:1em;color:#0ea5e9">You unlocked them all! Click for your reward.</div>`;
+    document.getElementById("redeem-btn").onclick = ()=>{
+      document.getElementById("sfx-redeem").play();
+      alert("Congrats! Your redemption will be processed (hook your backend logic here).");
+      document.getElementById("redeem-btn").disabled=true;
+    }
   }
-  document.getElementById('redeem-cta').innerHTML = cta;
 
-  // Redeem logic
-  if(document.getElementById('redeem-btn')) {
-    document.getElementById('redeem-btn').onclick = async ()=>{
-      document.getElementById('sfx-redeem').play();
-      alert('🎉 Congratulations!\nYour reward will be processed (implement your backend logic here).');
-      // Here you would update the DB (e.g. mark cards as redeemed, trigger webhook, etc)
-      document.getElementById('redeem-btn').style.display="none";
-    };
-  }
+  // 4. Leaderboard
+  let { data: leaders=[] } = await supabase
+    .from('customer_stats')
+    .select('customer_email,customer_name,unique_cards')
+    .order('unique_cards', {ascending:false}).limit(10);
+
+  let lbHtml = (leaders.map((l,i)=>`
+    <div style="display:flex;align-items:center;gap:.66em;margin-bottom:7px; font-family:'Bungee',Arial;">
+      <span style="font-size:1.3em;color:${i<3?"#fdc92f":"#6cebed"};">${i==0?"👑":i+1}</span>
+      <span style="font-weight: 700">${l.customer_name||l.customer_email}</span>
+      <span class="badge">${l.unique_cards||0} cards</span>
+    </div>
+  `).join("")) || "<span>No leaderboard yet.</span>");
+  document.getElementById("leaderboard").innerHTML = lbHtml;
 
   // NAV back
   document.getElementById('back-btn').onclick = ()=>{
-    window.location.href = "index.html?email="+encodeURIComponent(email);
+    location.href = "index.html?email="+encodeURIComponent(userEmail);
   };
 
-  // -- LEADERBOARD
-  // Query leaderboard from stats, order by unique_cards DESC
-  let {data:leaders=[]} = await supabase
-    .from('customer_stats')
-    .select('*')
-    .order('unique_cards', {ascending:false}).limit(10);
-
-  let boardDiv = document.getElementById('leaderboard');
-  let rows = leaders.map((l,i)=>`
-    <div style="display:flex;align-items:center;gap:0.8em;padding:0.6em;border-radius:1em;background:#1e263569;margin-bottom:8px;box-shadow:0 0 5px #facc1550;">
-      <span style="font-size:1.5em;margin-right:.6em;font-weight:bold;color:${i<3?"#facc15":"#38bdf8"};">${i==0?"👑":i+1}</span>
-      <span style="font-weight:700;font-size:1.09em;">${l.customer_name||l.customer_email}</span>
-      <span class="badge">x${l.unique_cards} cards</span>
-    </div>
-  `).join("\n");
-  boardDiv.innerHTML = rows || "<div>No leaders yet...</div>";
-});
+})();
