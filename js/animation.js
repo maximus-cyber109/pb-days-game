@@ -1,185 +1,108 @@
-// Initialize Supabase client
-const supabase = window.supabase.createClient(
-  CONFIG.supabaseUrl,
-  CONFIG.supabaseKey
-);
+let soundManager = null;
 
-/**
- * Get segment to card mapping from database
- */
-async function getSegmentCardMapping() {
-  const { data, error } = await supabase
-    .from('segment_cards')
-    .select('segment_code, card_name');
+function initSounds() {
+  if (!window.Howl || soundManager) return;
+  
+  try {
+    soundManager = {
+      cardFlip: new Howl({ src: [CONFIG.SOUNDS.cardFlip], volume: 0.7 }),
+      revealRare: new Howl({ src: [CONFIG.SOUNDS.revealRare], volume: 0.8 }),
+      victory: new Howl({ src: [CONFIG.SOUNDS.victory], volume: 0.6 }),
+      muted: false,
+      
+      toggleMute: function() {
+        this.muted = !this.muted;
+        Object.keys(this).forEach(key => {
+          if (this[key] && typeof this[key].mute === 'function') {
+            this[key].mute(this.muted);
+          }
+        });
+      }
+    };
+  } catch (error) {
+    console.warn('Sound initialization failed:', error);
+  }
+}
 
-  if (error) throw error;
+function animateCardReveal(cardElement, isRare, delay = 0) {
+  setTimeout(() => {
+    if (soundManager && !soundManager.muted) {
+      soundManager.cardFlip.play();
+    }
 
-  // Convert to map: { IC: 'LensWarden', HD: 'Device-Keeper', ... }
-  const map = {};
-  data.forEach(row => {
-    map[row.segment_code] = row.card_name;
+    anime({
+      targets: cardElement,
+      rotateY: [0, 180],
+      duration: 600,
+      easing: 'easeInOutQuad',
+      complete: () => {
+        cardElement.classList.add('flipped');
+        
+        if (soundManager && !soundManager.muted && isRare) {
+          soundManager.revealRare.play();
+        }
+
+        if (isRare) {
+          anime({
+            targets: cardElement.querySelector('.card-front'),
+            boxShadow: [
+              '0 0 20px rgba(251, 191, 36, 0.5)',
+              '0 0 40px rgba(251, 191, 36, 0.9)',
+              '0 0 20px rgba(251, 191, 36, 0.5)'
+            ],
+            duration: 2000,
+            loop: true,
+            easing: 'easeInOutSine'
+          });
+        }
+      }
+    });
+
+    anime({
+      targets: cardElement,
+      scale: [0.5, 1],
+      opacity: [0, 1],
+      duration: 500,
+      easing: 'easeOutElastic(1, .5)'
+    });
+
+  }, delay);
+}
+
+function revealAllCards(cards, containerElement) {
+  cards.forEach((card, index) => {
+    const cardEl = createCardElement(card);
+    containerElement.appendChild(cardEl);
+    animateCardReveal(cardEl, card.isRare, index * 1500);
   });
 
-  return map;
-}
-
-/**
- * Fetch products by SKUs
- */
-async function getProductsBySKUs(skus) {
-  const { data, error } = await supabase
-    .from('products')
-    .select('p_code, segment_code, product_price')
-    .in('p_code', skus);
-
-  if (error) throw error;
-  return data || [];
-}
-
-/**
- * Save order and rewards to database
- */
-async function saveOrderRewards(orderData, rewards) {
-  try {
-    // 1. Insert order
-    const { error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        order_id: orderData.orderId,
-        customer_email: orderData.email,
-        grand_total: orderData.total,
-        order_date: new Date().toISOString()
-      });
-
-    if (orderError) {
-      // Check for duplicate (order already claimed)
-      if (orderError.code === '23505') {
-        return { success: false, error: 'Order already claimed!', duplicate: true };
-      }
-      throw orderError;
-    }
-
-    // 2. Insert cards
-    if (rewards.cards.length > 0) {
-      const cardsToInsert = rewards.cards.map(card => ({
-        order_id: orderData.orderId,
-        customer_email: orderData.email,
-        card_name: card.cardName,
-        segment_code: card.segmentCode,
-        is_rare: card.isRare,
-        product_sku: card.sku,
-        product_price: card.price
-      }));
-
-      const { error: cardsError } = await supabase
-        .from('cards_earned')
-        .insert(cardsToInsert);
-
-      if (cardsError) throw cardsError;
-    }
-
-    // 3. Insert value rewards
-    if (rewards.valueRewards.length > 0) {
-      const valueToInsert = rewards.valueRewards.map(reward => ({
-        order_id: orderData.orderId,
-        customer_email: orderData.email,
-        product_sku: reward.sku,
-        product_price: reward.price,
-        reward_amount: reward.amount
-      }));
-
-      const { error: valueError } = await supabase
-        .from('value_rewards')
-        .insert(valueToInsert);
-
-      if (valueError) throw valueError;
-    }
-
-    // 4. Update customer stats
-    await updateCustomerStats(
-      orderData.email,
-      orderData.customerName || 'Customer',
-      rewards
-    );
-
-    return { success: true };
-
-  } catch (error) {
-    console.error('Save rewards error:', error);
-    return { success: false, error: error.message };
+  if (soundManager && !soundManager.muted && cards.length > 0) {
+    setTimeout(() => {
+      soundManager.victory.play();
+    }, cards.length * 1500 + 1000);
   }
 }
 
-/**
- * Update customer stats for leaderboard
- */
-async function updateCustomerStats(email, name, rewards) {
-  const { data: existing } = await supabase
-    .from('customer_stats')
-    .select('*')
-    .eq('customer_email', email)
-    .single();
-
-  if (existing) {
-    // Update existing
-    await supabase
-      .from('customer_stats')
-      .update({
-        total_cards: existing.total_cards + rewards.totalCards,
-        total_rare_cards: existing.total_rare_cards + rewards.totalRareCards,
-        updated_at: new Date().toISOString()
-      })
-      .eq('customer_email', email);
-  } else {
-    // Insert new
-    await supabase
-      .from('customer_stats')
-      .insert({
-        customer_email: email,
-        customer_name: name,
-        total_cards: rewards.totalCards,
-        total_rare_cards: rewards.totalRareCards
-      });
-  }
-}
-
-/**
- * Get customer's cards
- */
-async function getCustomerCards(email) {
-  const { data, error } = await supabase
-    .from('cards_earned')
-    .select('*')
-    .eq('customer_email', email)
-    .order('earned_at', { ascending: false });
-
-  if (error) throw error;
-  return data || [];
-}
-
-/**
- * Check if order already claimed
- */
-async function checkOrderClaimed(orderId) {
-  const { data } = await supabase
-    .from('orders')
-    .select('order_id')
-    .eq('order_id', orderId)
-    .single();
-
-  return data !== null;
-}
-
-/**
- * Get leaderboard
- */
-async function getLeaderboard(limit = 10) {
-  const { data, error } = await supabase
-    .from('customer_stats')
-    .select('*')
-    .order('total_cards', { ascending: false})
-    .limit(limit);
-
-  if (error) throw error;
-  return data || [];
+// Updated to use GitHub URLs
+function createCardElement(card) {
+  const cardDiv = document.createElement('div');
+  cardDiv.className = 'card';
+  
+  // Get image URLs from GitHub
+  const cardImageUrl = `${CONFIG.cardImagesBaseUrl}/${card.cardName}.png`;
+  const cardBackUrl = CONFIG.cardBackUrl;
+  
+  cardDiv.innerHTML = `
+    <div class="card-inner">
+      <div class="card-back">
+        <img src="${cardBackUrl}" alt="Card Back" onerror="this.src='https://via.placeholder.com/300x420/1f2937/ffffff?text=Card+Back'">
+      </div>
+      <div class="card-front">
+        <img src="${cardImageUrl}" alt="${card.cardName}" onerror="this.src='https://via.placeholder.com/300x420/6366f1/ffffff?text=${card.cardName}'">
+        ${card.isRare ? '<span class="rare-badge">⭐ RARE</span>' : ''}
+        <div class="card-name">${card.cardName}</div>
+      </div>
+    </div>
+  `;
+  return cardDiv;
 }
