@@ -1,0 +1,15 @@
+[build]
+  command = "echo 'No build needed'"
+  publish = "."
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[dev]
+  command = "echo 'Serving static files'"
+  port = 8888
+  targetPort = 8888
+  autoLaunch = false
