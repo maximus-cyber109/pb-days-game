@@ -1,12 +1,21 @@
-// Initialize Supabase client
-const supabase = window.supabase.createClient(
-  CONFIG.supabaseUrl,
-  CONFIG.supabaseKey
-);
+// Initialize Supabase client with ENV variables
+let supabase = null;
 
-/**
- * Get segment to card mapping from database
- */
+function initSupabase() {
+  if (!window.ENV || !window.ENV.SUPABASE_URL || !window.ENV.SUPABASE_KEY) {
+    console.error('Supabase credentials not found in ENV');
+    return;
+  }
+
+  supabase = window.supabase.createClient(
+    window.ENV.SUPABASE_URL,
+    window.ENV.SUPABASE_KEY
+  );
+
+  console.log('Supabase initialized');
+}
+
+// Get segment to card mapping
 async function getSegmentCardMapping() {
   const { data, error } = await supabase
     .from('segment_cards')
@@ -14,7 +23,6 @@ async function getSegmentCardMapping() {
 
   if (error) throw error;
 
-  // Convert to map: { IC: 'LensWarden', HD: 'Device-Keeper', ... }
   const map = {};
   data.forEach(row => {
     map[row.segment_code] = row.card_name;
@@ -23,9 +31,7 @@ async function getSegmentCardMapping() {
   return map;
 }
 
-/**
- * Fetch products by SKUs
- */
+// Fetch products by SKUs
 async function getProductsBySKUs(skus) {
   const { data, error } = await supabase
     .from('products')
@@ -36,12 +42,9 @@ async function getProductsBySKUs(skus) {
   return data || [];
 }
 
-/**
- * Save order and rewards to database
- */
+// Save order and rewards
 async function saveOrderRewards(orderData, rewards) {
   try {
-    // 1. Insert order
     const { error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -52,14 +55,12 @@ async function saveOrderRewards(orderData, rewards) {
       });
 
     if (orderError) {
-      // Check for duplicate (order already claimed)
       if (orderError.code === '23505') {
         return { success: false, error: 'Order already claimed!', duplicate: true };
       }
       throw orderError;
     }
 
-    // 2. Insert cards
     if (rewards.cards.length > 0) {
       const cardsToInsert = rewards.cards.map(card => ({
         order_id: orderData.orderId,
@@ -71,14 +72,9 @@ async function saveOrderRewards(orderData, rewards) {
         product_price: card.price
       }));
 
-      const { error: cardsError } = await supabase
-        .from('cards_earned')
-        .insert(cardsToInsert);
-
-      if (cardsError) throw cardsError;
+      await supabase.from('cards_earned').insert(cardsToInsert);
     }
 
-    // 3. Insert value rewards
     if (rewards.valueRewards.length > 0) {
       const valueToInsert = rewards.valueRewards.map(reward => ({
         order_id: orderData.orderId,
@@ -88,19 +84,10 @@ async function saveOrderRewards(orderData, rewards) {
         reward_amount: reward.amount
       }));
 
-      const { error: valueError } = await supabase
-        .from('value_rewards')
-        .insert(valueToInsert);
-
-      if (valueError) throw valueError;
+      await supabase.from('value_rewards').insert(valueToInsert);
     }
 
-    // 4. Update customer stats
-    await updateCustomerStats(
-      orderData.email,
-      orderData.customerName || 'Customer',
-      rewards
-    );
+    await updateCustomerStats(orderData.email, orderData.customerName, rewards);
 
     return { success: true };
 
@@ -110,9 +97,7 @@ async function saveOrderRewards(orderData, rewards) {
   }
 }
 
-/**
- * Update customer stats for leaderboard
- */
+// Update customer stats
 async function updateCustomerStats(email, name, rewards) {
   const { data: existing } = await supabase
     .from('customer_stats')
@@ -121,7 +106,6 @@ async function updateCustomerStats(email, name, rewards) {
     .single();
 
   if (existing) {
-    // Update existing
     await supabase
       .from('customer_stats')
       .update({
@@ -131,7 +115,6 @@ async function updateCustomerStats(email, name, rewards) {
       })
       .eq('customer_email', email);
   } else {
-    // Insert new
     await supabase
       .from('customer_stats')
       .insert({
@@ -143,9 +126,7 @@ async function updateCustomerStats(email, name, rewards) {
   }
 }
 
-/**
- * Get customer's cards
- */
+// Get customer's cards
 async function getCustomerCards(email) {
   const { data, error } = await supabase
     .from('cards_earned')
@@ -157,9 +138,7 @@ async function getCustomerCards(email) {
   return data || [];
 }
 
-/**
- * Check if order already claimed
- */
+// Check if order already claimed
 async function checkOrderClaimed(orderId) {
   const { data } = await supabase
     .from('orders')
@@ -170,14 +149,12 @@ async function checkOrderClaimed(orderId) {
   return data !== null;
 }
 
-/**
- * Get leaderboard
- */
+// Get leaderboard
 async function getLeaderboard(limit = 10) {
   const { data, error } = await supabase
     .from('customer_stats')
     .select('*')
-    .order('total_cards', { ascending: false})
+    .order('total_cards', { ascending: false })
     .limit(limit);
 
   if (error) throw error;
