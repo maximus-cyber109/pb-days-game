@@ -53,87 +53,97 @@ function emailCheck() {
 }
 emailCheck();
 
-// --- MAIN Reveal logic next ---
+// ...[setup/ENV/email check]... (see previous responses)
+
 async function startRevealFlow() {
-  // Show loading spinner
   loadingDiv.style.display = "";
   deckElem.innerHTML = "";
 
-  // --- 1. SUPABASE ENV ---
   initSupabase();
   if (!window.supabase) {
-    loadingDiv.innerHTML = "<span style='color:#fff;'>Could not connect to rewards server.<br/><small>Try again in a moment.</small></span>";
+    loadingDiv.innerHTML = "Could not connect to rewards server.";
     return;
   }
 
-  // --- 2. GET latest ORDER for email (call your serverless/netlify function, which must return order id) ---
-  let order = null;
+  // Get latest order + SKUs from the Netlify function
+  let order, skus;
   try {
-    let resp = await fetch('/.netlify/functions/magento-fetch', {
+    let res = await fetch('/.netlify/functions/magento-fetch', {
       method: "POST",
       body: JSON.stringify({ email: userEmail }),
       headers: { 'Content-Type': 'application/json' }
     }).then(r=>r.json());
-    if(!resp.success || !resp.order || !resp.order.id) throw new Error("No eligible order found.");
-    order = resp.order;
+    if(!res.success || !res.order || !Array.isArray(res.skus) || !res.skus.length)
+      throw new Error(res.error || "No order found.");
+    order = res.order;
+    skus = res.skus;
     document.getElementById("subtitle-order").innerHTML = `<br/><small style="font-family:'Rubik',Arial;color:#b3e3ff;font-size:.82em;">Order #${order.increment_id}</small>`;
-  } catch(e){
-    loadingDiv.innerHTML = `<span style="color:#fff;"><br>No eligible order found for this email!</span>`;
+  } catch (err){
+    loadingDiv.innerHTML = "No eligible order found for this email!";
     return;
   }
-
-  // --- 3. GET Cards earned for this order ---
-  let { data: cards=[] } = await supabase
-    .from('cards_earned')
-    .select('card_name, is_rare, quantity')
-    .eq("order_id", order.id);
-
-  // --- 4. Render Animation (one by one, only what user earned!) ---
-  if(!cards.length){
-    loadingDiv.innerHTML = `<span style="color:#fbbf24;">No cards earned for this order.<br/>Try another!</span>`;
+  // Fetch card reward mapping for EACH SKU
+  // e.g. from 'products' table in Supabase; you can also handle reward logic here if needed
+  let { data: prodList=[] } = await supabase
+    .from('products')
+    .select('p_code, segment_code, product_price')
+    .in('p_code', skus);
+  if (!prodList.length) {
+    loadingDiv.innerHTML = "No eligible products/cards.";
     return;
   }
+  // Get segment-card mapping (one-time or cached)
+  let segMap = await getSegmentCardMapping();
+  // Use reward-logic.js for mapping (one card per SKU as per your rules)
+  let cards = prodList.map(p => {
+    let reward = calculateProductReward(p, segMap);
+    if (reward.type === 'card') return { card_name: reward.cardName, is_rare: reward.isRare, quantity:1 };
+    return null;
+  }).filter(Boolean);
 
+  // Tally (if multiple identical cards)
+  const cardTally = {};
+  cards.forEach(card=>{
+    if(!cardTally[card.card_name]) cardTally[card.card_name]= {...card, quantity: 0};
+    cardTally[card.card_name].quantity += 1;
+    cardTally[card.card_name].is_rare = cardTally[card.card_name].is_rare || card.is_rare;
+  });
+
+  // Animate the user's actual results, one by one
   loadingDiv.style.display = "none";
   deckElem.innerHTML = "";
-  let revealed = 0;
-  (function revealCards() {
-    if(revealed >= cards.length) {
+  let cardArr = Object.values(cardTally);
+  let i = 0;
+  (function revealNext(){
+    if(i>=cardArr.length) {
       document.getElementById('view-collection-btn').style.display = "block";
       return;
     }
-    let {card_name, is_rare, quantity} = cards[revealed];
-    let cardDiv = document.createElement('div');
-    cardDiv.className = "cr-card" + (is_rare?" rare":"");
-    // Card image
+    let {card_name, is_rare, quantity} = cardArr[i];
+    let div = document.createElement('div');
+    div.className = "cr-card" + (is_rare ? " rare" : "");
     let img = document.createElement('img');
     img.className = "cr-image";
-    img.alt = card_name;
     img.src = CARD_IMAGES[card_name] || "";
-    cardDiv.appendChild(img);
-    // Card name
+    img.alt = card_name;
+    div.appendChild(img);
     let title = document.createElement('div');
     title.className = "cr-card-title";
     title.textContent = card_name;
-    cardDiv.appendChild(title);
-    // Count badge
-    if(quantity>1){
+    div.appendChild(title);
+    if (quantity > 1) {
       let badge = document.createElement('span');
       badge.className = 'cr-card-count';
       badge.textContent = "x" + quantity;
-      cardDiv.appendChild(badge);
+      div.appendChild(badge);
     }
-    // SFX
     let sfx = is_rare ? sfxRare : sfxReveal;
     try{ sfx.currentTime=0; sfx.play(); }catch{}
-    deckElem.appendChild(cardDiv);
-    revealed++;
-    setTimeout(revealCards, 780);
+    deckElem.appendChild(div);
+    i++; setTimeout(revealNext, 800);
   })();
 
-  // Button: Go to collection
-  document.getElementById('view-collection-btn').onclick = function(){
+  document.getElementById('view-collection-btn').onclick = function() {
     window.location.href = "redeem.html?email=" + encodeURIComponent(userEmail);
   };
 }
-if (userEmail) setTimeout(startRevealFlow, 100);
