@@ -58,21 +58,43 @@ async function startRevealFlow(){
     return;
   }
   // --- 2. Get order + SKUs
-  let order, skus;
-  try {
-    let res = await fetch('/.netlify/functions/magento-fetch', {
-      method: "POST",
-      body: JSON.stringify({ email: userEmail }),
-      headers: { 'Content-Type': 'application/json' }
-    }).then(r=>r.json());
-    if(!res.success || !res.order || !Array.isArray(res.skus) || !res.skus.length)
-      throw new Error(res.error || "No order found");
-    order = res.order;
-    skus = res.skus;
-  } catch (err) {
-    loadingDiv.innerHTML = "No eligible order for this email!";
-    return;
+let order, skus;
+try {
+  let res = await fetch('/.netlify/functions/magento-fetch', {
+    method: "POST",
+    body: JSON.stringify({ email: userEmail }),
+    headers: { 'Content-Type': 'application/json' }
+  });
+  
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   }
+  
+  let data = await res.json();
+  console.log("Magento response:", data);  // DEBUG LOG
+  
+  if(!data.success) {
+    throw new Error(data.error || "No order returned from backend");
+  }
+  
+  if(!data.order || !data.order.id) {
+    throw new Error("Order object missing or invalid");
+  }
+  
+  if(!Array.isArray(data.skus) || data.skus.length === 0) {
+    throw new Error("No SKUs found in order");
+  }
+  
+  order = data.order;
+  skus = data.skus;
+  
+  console.log("Order ID:", order.id, "SKUs:", skus);  // DEBUG LOG
+  
+} catch (err) {
+  console.error("Order fetch error:", err);
+  loadingDiv.innerHTML = `<span style="color:#c82b11;">Error: ${err.message}</span>`;
+  return;
+}
   // --- 3. Lookup mapped cards for SKUs
   let { data: prodList=[] } = await supabase
     .from('products')
