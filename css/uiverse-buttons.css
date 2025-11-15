@@ -1,36 +1,23 @@
-@import url('https://fonts.googleapis.com/css2?family=Rubik:700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rubik:600&display=swap');
 .button {
-  font-family: "Rubik", sans-serif;
+  font-family: "Rubik", Arial, sans-serif;
+  border: none;
+  background: linear-gradient(100deg,#ffdb70 35%,#3653a7 100%);
+  color: #232b44;
+  font-size: 1.14rem;
+  font-weight: bold;
+  padding: 1em 2.8em;
+  border-radius: 1.5em;
+  box-shadow: 0 3px 21px #232b4477,0 2px 8px #ffe066bb;
+  letter-spacing: 0.02em;
   cursor: pointer;
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 1.18rem;
-  border-radius: 1rem;
-  outline: 2px solid transparent;
-  outline-offset: 6px;
-  color: #fafaf9;
-  background: linear-gradient(120deg,#facc15 0 50%,#292524 100%);
-  border: none;
-  padding: .7em 2em;
-  transition: 0.16s;
+  outline: none; min-width:110px;
+  transition: box-shadow .2s,transform .08s;
 }
-.button:active, .button:focus-visible {
-  outline-color: #facc15;
-  outline-style: dashed;
+.button:hover, .button:focus-visible {
+  box-shadow: 0 9px 42px #ffe066bb,0 3px 15px #324366cc;
+  color: #ca8a04;
 }
-.button::before {
-  content: "";
-  z-index: 0; position: absolute; height: 200%;
-  max-height: 100px; aspect-ratio: 1; margin: auto;
-  background: white;
-  border-radius: inherit;
-  opacity: 0.15;
-  filter: blur(7px);
-  left:35%; right:35%; top:35%; bottom:35%;
-  pointer-events: none;
-}
-.button:hover::before { opacity: 1; }
-/* Add more uiverse variants as desired */
+.button:active { transform: scale(0.98) rotate(-1.5deg);}
+.button > div > div > div { pointer-events:none; }
