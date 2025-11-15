@@ -3,35 +3,31 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>PB DAYS Game of Crowns — My Collection</title>
+  <title>PB DAYS · My Collection</title>
   <link rel="stylesheet" href="css/styles.css"/>
   <link rel="stylesheet" href="css/uiverse-buttons.css"/>
-  <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bungee:wght@400&family=Rubik:500&display=swap" rel="stylesheet"/>
+  <script src="js/config.js"></script>
 </head>
 <body>
-  <audio id="bg-music" src=""></audio>
-  <audio id="sfx-redeem" src=""></audio>
-  <audio id="sfx-leader" src=""></audio>
+  <audio id="bg-music" src="" loop preload="auto"></audio>
+  <audio id="sfx-redeem" src="" preload="auto"></audio>
+  <img id="logo-main" class="logo-main" src="" alt="PB Days Logo"/>
 
-  <img class="logo-main" id="logo-main" src="" alt="PB Days Game of Crowns"/>
-  <main>
-    <div class="header-section">
-      <h1>My Card Collection</h1>
-      <h2 id="email-hd"></h2>
-    </div>
-    <section id="redeem-section">
-      <div id="collection" class="card-deck"></div>
-      <div id="redeem-cta"></div>
-    </section>
-    <section id="leaderboard-page">
-      <h2 style="margin-top:2rem;">🏆 Leaderboard</h2>
-      <div id="leaderboard"></div>
-    </section>
-    <div style="text-align:center;margin-top:2em;">
-      <button class="button" id="back-btn"><div><div><div>Back to Reveal Page</div></div></div></button>
-    </div>
-  </main>
-  <script src="js/config.js"></script>
+  <div class="cr-title">Your Card Collection</div>
+  <div class="cr-subtitle" id="col-email"></div>
+  <div class="cr-card-deck" id="col-deck"></div>
+
+  <div id="redeem-cta" style="text-align:center;margin:1.7em 0;"></div>
+
+  <div class="cr-title" style="font-size:1.27em;margin-top:2.8em;">Leaderboard</div>
+  <div id="leaderboard" style="margin-bottom:2em;"></div>
+
+  <div style="text-align:center;margin-top:2.1em;">
+    <button class="button" id="back-btn"><div><div><div>← Back to Reveal</div></div></div></button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/reward-logic.js"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/app-redeem.js"></script>
