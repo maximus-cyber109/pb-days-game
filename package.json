@@ -1,0 +1,13 @@
+{
+  "name": "pb-days-game-of-crowns",
+  "version": "1.0.0",
+  "description": "PB Days collectible card rewards system",
+  "main": "index.html",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "npm install"
+  },
+  "dependencies": {
+    "axios": "^1.6.2"
+  }
+}
