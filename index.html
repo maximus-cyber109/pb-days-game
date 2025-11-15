@@ -3,222 +3,276 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PB DAYS: My Collection</title>
+  <meta name="theme-color" content="#6366f1">
+  <title>PB DAYS: Game of Crowns - Your Rewards</title>
+  
   <link rel="stylesheet" href="/css/styles.css">
+  
+  <!-- CDN Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/howler@2.2.3/dist/howler.min.js"></script>
 </head>
 <body>
   <div class="container">
-    <div id="loading" class="loading">
+    <!-- Email Modal -->
+    <div id="email-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2>🎴 Enter Your Email</h2>
+        <p>Please enter your email address to view your rewards</p>
+        <form id="email-form" onsubmit="submitEmail(event)">
+          <input 
+            type="email" 
+            id="email-input" 
+            placeholder="your@email.com" 
+            required 
+            autocomplete="email"
+          >
+          <button type="submit" class="btn-primary">Continue</button>
+        </form>
+        <p class="modal-hint">This should be the email used for your order</p>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" class="loading hidden">
       <div class="spinner"></div>
-      <p>Loading your collection...</p>
+      <p>Processing your rewards...</p>
+      <p class="loading-subtext">Please wait while we calculate your cards</p>
     </div>
 
-    <div id="content" class="hidden">
-      <!-- Header -->
+    <!-- Error State -->
+    <div id="error" class="error hidden">
+      <div class="error-icon">⚠️</div>
+      <h2>Oops! Something went wrong</h2>
+      <p id="error-message"></p>
+      <button class="btn-primary" onclick="location.reload()">Try Again</button>
+      <button class="btn-secondary" onclick="goToSupport()">Contact Support</button>
+    </div>
+
+    <!-- Rewards Container -->
+    <div id="rewards-container" class="hidden">
       <div class="header-section">
-        <h1>🏆 My Card Collection</h1>
-        <p class="subtitle" id="user-email"></p>
+        <h1>🎴 Your Rewards Await!</h1>
+        <p class="subtitle" id="card-count"></p>
       </div>
-
-      <!-- Stats -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-value" id="total-cards">0</div>
-          <div class="stat-label">Total Cards</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="rare-cards">0</div>
-          <div class="stat-label">Rare Cards ⭐</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="total-value">₹0</div>
-          <div class="stat-label">Cash Rewards</div>
-        </div>
-      </div>
-
-      <!-- My Cards -->
-      <div class="section">
-        <h2>My Cards</h2>
-        <div id="my-cards-grid" class="cards-grid-small"></div>
-      </div>
-
-      <!-- Redemption Section -->
-      <div class="section" id="redemption-section">
-        <h2>Redemption Options</h2>
-        <div id="redemption-options"></div>
-      </div>
-
-      <!-- Leaderboard -->
-      <div class="section">
-        <h2>🏆 Top Collectors</h2>
-        <div id="leaderboard"></div>
+      
+      <div id="cards-grid" class="cards-grid"></div>
+      
+      <div id="continue-btn" class="continue-section hidden">
+        <button class="btn-primary btn-large" onclick="goToRedemption()">
+          View My Collection & Redeem →
+        </button>
+        <p class="hint-text">You can come back anytime to view your cards</p>
       </div>
     </div>
+
+    <!-- Sound Toggle -->
+    <button id="sound-toggle" class="sound-toggle" onclick="toggleSound()">
+      <span id="sound-icon">🔊</span>
+    </button>
   </div>
 
-  <script src="/js/config.js"></script>
-  <script src="/js/supabase-client.js"></script>
+  <!-- Load ENV variables from Netlify -->
+  <script>
+    window.ENV = {
+      SUPABASE_URL: '${VITE_SUPABASE_URL}',
+      SUPABASE_KEY: '${VITE_SUPABASE_KEY}',
+      WEBENGAGE_LICENSE: '${WEBENGAGE_LICENSE_CODE}',
+      WEBENGAGE_API_KEY: '${WEBENGAGE_API_KEY}'
+    };
+  </script>
 
+  <!-- Scripts -->
+  <script src="/js/config.js"></script>
+  <script src="/js/reward-logic.js"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/animations.js"></script>
+  
   <script>
     let currentEmail = null;
+    let soundEnabled = true;
 
+    // Check for email parameter or show modal
+    function checkEmail() {
+      const params = new URLSearchParams(window.location.search);
+      const emailParam = params.get('email');
+
+      if (emailParam && emailParam.trim()) {
+        currentEmail = emailParam.trim().toLowerCase();
+        document.getElementById('email-modal').classList.add('hidden');
+        init();
+      } else {
+        // Show email modal
+        document.getElementById('email-modal').classList.remove('hidden');
+        document.getElementById('email-input').focus();
+      }
+    }
+
+    // Submit email from modal
+    function submitEmail(event) {
+      event.preventDefault();
+      const emailInput = document.getElementById('email-input');
+      currentEmail = emailInput.value.trim().toLowerCase();
+
+      if (currentEmail) {
+        document.getElementById('email-modal').classList.add('hidden');
+        // Update URL with email parameter
+        const newUrl = `${window.location.pathname}?email=${encodeURIComponent(currentEmail)}`;
+        window.history.pushState({}, '', newUrl);
+        init();
+      }
+    }
+
+    // Main initialization
     async function init() {
       try {
-        const params = new URLSearchParams(window.location.search);
-        currentEmail = params.get('email');
-
         if (!currentEmail) {
-          throw new Error('Email parameter required');
+          throw new Error('Email is required');
         }
 
-        document.getElementById('user-email').textContent = currentEmail;
+        // Show loading
+        document.getElementById('loading').classList.remove('hidden');
 
-        // Load customer data
-        const [cards, valueRewards, stats, leaderboard] = await Promise.all([
-          getCustomerCards(currentEmail),
-          getCustomerValueRewards(currentEmail),
-          getCustomerStats(currentEmail),
-          getLeaderboard(10)
-        ]);
+        // Initialize sounds
+        initSounds();
 
-        // Update stats
-        document.getElementById('total-cards').textContent = cards.length;
-        document.getElementById('rare-cards').textContent = 
-          cards.filter(c => c.is_rare).length;
+        // Load ENV config
+        CONFIG.supabaseUrl = window.ENV.SUPABASE_URL;
+        CONFIG.supabaseKey = window.ENV.SUPABASE_KEY;
+
+        // Initialize Supabase with ENV vars
+        initSupabase();
+
+        console.log('Fetching order for:', currentEmail);
+
+        // Step 1: Fetch order from Magento
+        const orderResponse = await fetch(`${CONFIG.apiUrl}/magento-fetch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: currentEmail })
+        });
+
+        if (!orderResponse.ok) {
+          throw new Error(`Server error: ${orderResponse.status}`);
+        }
+
+        const orderData = await orderResponse.json();
         
-        const totalValue = valueRewards.reduce((sum, r) => sum + parseFloat(r.reward_amount), 0);
-        document.getElementById('total-value').textContent = `₹${totalValue.toFixed(2)}`;
+        if (!orderData.success) {
+          throw new Error(orderData.error || 'Failed to fetch order');
+        }
 
-        // Show cards
-        displayCards(cards);
+        console.log('Order fetched:', orderData.order.id);
 
-        // Show redemption options
-        displayRedemptionOptions(cards.length);
+        // Step 2: Check if already claimed
+        const alreadyClaimed = await checkOrderClaimed(orderData.order.id);
+        if (alreadyClaimed) {
+          console.log('Order already claimed, redirecting...');
+          window.location.href = `/redemption.html?email=${currentEmail}`;
+          return;
+        }
 
-        // Show leaderboard
-        displayLeaderboard(leaderboard, currentEmail);
+        // Step 3: Get segment card mapping
+        const segmentCardMap = await getSegmentCardMapping();
 
-        // Show content
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('content').classList.remove('hidden');
+        // Step 4: Get products from database
+        const skus = orderData.order.items.map(item => item.sku);
+        const products = await getProductsBySKUs(skus);
+
+        if (!products || products.length === 0) {
+          throw new Error('No products found in database. Please contact support.');
+        }
+
+        console.log('Products found:', products.length);
+
+        // Step 5: Calculate rewards
+        const rewards = calculateOrderRewards(products, segmentCardMap);
+        console.log('Rewards calculated:', rewards);
+
+        // Step 6: Save to database
+        const saveResult = await saveOrderRewards({
+          orderId: orderData.order.id,
+          email: currentEmail,
+          total: orderData.order.grand_total,
+          customerName: orderData.customer?.firstname || 'Customer'
+        }, rewards);
+
+        if (!saveResult.success) {
+          if (saveResult.duplicate) {
+            window.location.href = `/redemption.html?email=${currentEmail}`;
+            return;
+          }
+          throw new Error(saveResult.error);
+        }
+
+        // Step 7: Show rewards!
+        showRewards(rewards);
 
       } catch (error) {
-        console.error('Error:', error);
-        alert(error.message);
+        console.error('Initialization error:', error);
+        showError(error.message);
       }
     }
 
-    function displayCards(cards) {
-      const grid = document.getElementById('my-cards-grid');
-      
-      if (cards.length === 0) {
-        grid.innerHTML = '<p class="no-cards">No cards collected yet</p>';
-        return;
-      }
+    function showRewards(rewards) {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('rewards-container').classList.remove('hidden');
 
-      grid.innerHTML = cards.map(card => `
-        <div class="card-mini ${card.is_rare ? 'rare' : ''}">
-          <img src="/images/cards/${card.card_name}.png" alt="${card.card_name}">
-          <div class="card-mini-name">${card.card_name}</div>
-          ${card.is_rare ? '<span class="rare-badge-mini">⭐</span>' : ''}
-        </div>
-      `).join('');
-    }
-
-    function displayRedemptionOptions(cardCount) {
-      const container = document.getElementById('redemption-options');
-      
-      if (cardCount === 0) {
-        container.innerHTML = '<p class="info-message">Collect cards to unlock redemption options!</p>';
-        return;
-      }
-
-      let tier = '';
-      let message = '';
-
-      if (cardCount === 1) {
-        tier = 'cash';
-        message = 'Redeem for PB Cash credit on your next order';
-      } else if (cardCount >= 2 && cardCount <= 4) {
-        tier = 'tier1';
-        message = 'Redeem for Bronze Tier Products (2-4 cards)';
-      } else if (cardCount >= 5 && cardCount <= 6) {
-        tier = 'tier2';
-        message = 'Redeem for Silver Tier Products (5-6 cards)';
-      } else if (cardCount >= 7) {
-        tier = 'tier3';
-        message = 'Redeem for Gold Tier Products (7+ cards)';
-      }
-
-      container.innerHTML = `
-        <div class="redemption-card">
-          <div class="redemption-icon">🎁</div>
-          <h3>You have ${cardCount} card${cardCount > 1 ? 's' : ''}</h3>
-          <p>${message}</p>
-          <button class="btn-primary" onclick="startRedemption('${tier}', ${cardCount})">
-            Start Redemption →
-          </button>
-        </div>
-      `;
-    }
-
-    function displayLeaderboard(leaders, currentUserEmail) {
-      const container = document.getElementById('leaderboard');
-      
-      if (leaders.length === 0) {
-        container.innerHTML = '<p>No leaders yet</p>';
-        return;
-      }
-
-      container.innerHTML = leaders.map((leader, index) => {
-        const isCurrentUser = leader.customer_email === currentUserEmail;
-        const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
-        
-        return `
-          <div class="leaderboard-row ${isCurrentUser ? 'current-user' : ''}">
-            <div class="rank">${rankIcon || (index + 1)}</div>
-            <div class="leader-info">
-              <div class="leader-name">${leader.customer_name || 'Anonymous'}</div>
-              <div class="leader-email">${isCurrentUser ? '(You)' : ''}</div>
-            </div>
-            <div class="leader-stats">
-              <div class="leader-cards">${leader.total_cards} cards</div>
-              <div class="leader-rare">${leader.total_rare_cards} rare</div>
-            </div>
+      if (rewards.cards.length === 0 && rewards.totalValueReward > 0) {
+        document.getElementById('card-count').innerHTML = `
+          <div class="value-reward-message">
+            <div class="value-icon">💰</div>
+            <p>You've earned <strong>PB Cash</strong> on your order!</p>
+            <p class="value-amount">₹${rewards.totalValueReward.toFixed(2)}</p>
           </div>
         `;
-      }).join('');
+        document.getElementById('continue-btn').classList.remove('hidden');
+        return;
+      }
+
+      const cardText = rewards.totalCards === 1 ? 'card' : 'cards';
+      const rareText = rewards.totalRareCards > 0 ? 
+        ` (${rewards.totalRareCards} rare ⭐)` : '';
+      
+      document.getElementById('card-count').textContent = 
+        `Revealing ${rewards.totalCards} ${cardText}${rareText}...`;
+
+      const grid = document.getElementById('cards-grid');
+      revealAllCards(rewards.cards, grid);
+
+      setTimeout(() => {
+        document.getElementById('continue-btn').classList.remove('hidden');
+      }, rewards.cards.length * 1500 + 2000);
     }
 
-    function startRedemption(tier, cardCount) {
-      alert(`Redemption for ${tier} tier coming soon! You have ${cardCount} cards.`);
-      // TODO: Implement actual redemption flow
+    function showError(message) {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('email-modal').classList.add('hidden');
+      document.getElementById('error').classList.remove('hidden');
+      document.getElementById('error-message').textContent = message;
     }
 
-    // Helper to get value rewards
-    async function getCustomerValueRewards(email) {
-      const { data, error } = await supabase
-        .from('value_rewards')
-        .select('*')
-        .eq('customer_email', email);
-
-      if (error) throw error;
-      return data || [];
+    function goToRedemption() {
+      if (currentEmail) {
+        window.location.href = `/redemption.html?email=${currentEmail}`;
+      }
     }
 
-    // Helper to get customer stats
-    async function getCustomerStats(email) {
-      const { data } = await supabase
-        .from('customer_stats')
-        .select('*')
-        .eq('customer_email', email)
-        .single();
-
-      return data;
+    function goToSupport() {
+      window.location.href = 'mailto:support@pinkblue.com?subject=PB Days Support';
     }
 
-    window.addEventListener('DOMContentLoaded', init);
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      if (soundManager) {
+        soundManager.toggleMute();
+      }
+      document.getElementById('sound-icon').textContent = soundEnabled ? '🔊' : '🔇';
+    }
+
+    // Start on page load
+    window.addEventListener('DOMContentLoaded', checkEmail);
   </script>
 </body>
 </html>
