@@ -1,5 +1,5 @@
 [build]
-  command = "npm install && npm run inject-env"
+  command = "npm install"
   publish = "."
   functions = "netlify/functions"
 
@@ -9,11 +9,51 @@
 [functions]
   node_bundler = "esbuild"
 
+# Important: Include all directories
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+    Content-Type = "application/javascript"
+
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+    Content-Type = "text/css"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  force = false
 
-# Replace ENV placeholders in HTML
-[[plugins]]
-  package = "@netlify/plugin-functions-install-core"
+# Prevent redirecting actual files
+[[redirects]]
+  from = "/js/*"
+  to = "/js/:splat"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/css/*"
+  to = "/css/:splat"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/images/*"
+  to = "/images/:splat"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/sounds/*"
+  to = "/sounds/:splat"
+  status = 200
+  force = false
