@@ -12,7 +12,7 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const { email } = JSON.parse(event.body || '{}');
+    const { email, orderId } = JSON.parse(event.body || '{}');
     if (!email) {
       return { 
         statusCode: 400, 
@@ -25,24 +25,29 @@ exports.handler = async (event, context) => {
     const BASE_URL = process.env.MAGENTO_BASE_URL.replace(/\/$/, '');
 
     if (!API_TOKEN || !BASE_URL) {
-      console.error('ENV missing:', { 
-        hasToken: !!API_TOKEN, 
-        hasUrl: !!BASE_URL 
-      });
       throw new Error('Magento ENV not configured');
     }
 
-    // CORRECT ENDPOINT: /orders (not /rest/V1/orders)
-    const searchUrl = `${BASE_URL}/orders?` +
-      `searchCriteria[filter_groups][0][filters][0][field]=customer_email&` +
-      `searchCriteria[filter_groups][0][filters][0][value]=${encodeURIComponent(email.toLowerCase())}&` +
-      `searchCriteria[filter_groups][0][filters][0][condition_type]=eq&` +
-      `searchCriteria[sort_orders][0][field]=created_at&` +
-      `searchCriteria[sort_orders][0][direction]=DESC&` +
-      `searchCriteria[page_size]=1`;
-
-    console.log('Fetching order for email:', email);
-    console.log('Search URL:', searchUrl);
+    let searchUrl;
+    
+    // If orderId provided, fetch that specific order
+    if (orderId) {
+      console.log('Fetching specific order:', orderId);
+      searchUrl = `${BASE_URL}/orders?` +
+        `searchCriteria[filter_groups][0][filters][0][field]=increment_id&` +
+        `searchCriteria[filter_groups][0][filters][0][value]=${encodeURIComponent(orderId)}&` +
+        `searchCriteria[filter_groups][0][filters][0][condition_type]=eq`;
+    } else {
+      // Otherwise fetch by email, sorted by created_at DESC (newest first)
+      console.log('Fetching latest order for email:', email);
+      searchUrl = `${BASE_URL}/orders?` +
+        `searchCriteria[filter_groups][0][filters][0][field]=customer_email&` +
+        `searchCriteria[filter_groups][0][filters][0][value]=${encodeURIComponent(email.toLowerCase())}&` +
+        `searchCriteria[filter_groups][0][filters][0][condition_type]=eq&` +
+        `searchCriteria[sort_orders][0][field]=created_at&` +
+        `searchCriteria[sort_orders][0][direction]=DESC&` +
+        `searchCriteria[page_size]=1`;
+    }
     
     const response = await axios.get(searchUrl, {
       headers: { 
@@ -52,82 +57,55 @@ exports.handler = async (event, context) => {
       timeout: 12000
     });
 
-    console.log('Response status:', response.status);
-    console.log('Items found:', response.data.items?.length || 0);
+    console.log('Response items:', response.data.items?.length);
 
-    // Get first (latest) order
     const ord = (response.data.items && response.data.items.length > 0) 
       ? response.data.items[0] 
       : null;
     
     if (!ord) {
-      console.warn('No orders found for email:', email);
+      console.warn('No order found');
       return { 
         statusCode: 404, 
         headers, 
+        body: JSON.stringify({ success: false, error: 'Order not found' }) 
+      };
+    }
+
+    console.log('✓ Order:', ord.entity_id, 'Increment:', ord.increment_id, 'Email:', ord.customer_email);
+    console.log('✓ Items count:', ord.items?.length);
+    console.log('✓ SKUs:', ord.items?.map(i => i.sku));
+
+    const items = ord.items || [];
+    const skus = items
+      .map(item => item.sku)
+      .filter(sku => sku);
+
+    if (skus.length === 0) {
+      return { 
+        statusCode: 400, 
+        headers, 
         body: JSON.stringify({ 
           success: false, 
-          error: 'No order found for this email' 
+          error: 'Order has no SKUs' 
         }) 
       };
     }
 
-    console.log('Order found - ID:', ord.entity_id, 'Increment:', ord.increment_id);
-    console.log('Items in order:', ord.items?.length || 0);
-
-    // Extract items safely
-    const items = Array.isArray(ord.items) ? ord.items : [];
-    
-    if (items.length === 0) {
-      console.warn('Order has no items!');
-      return { 
-        statusCode: 404, 
-        headers, 
-        body: JSON.stringify({ 
-          success: false, 
-          error: 'Order has no items to process' 
-        }) 
-      };
-    }
-
-    // Extract SKUs from items
-    const skuList = items
-      .map(i => {
-        console.log('Item:', { sku: i.sku, name: i.name, qty: i.qty_ordered });
-        return i.sku;
-      })
-      .filter(sku => sku && sku.trim() !== '');
-
-    console.log('SKUs extracted:', skuList);
-
-    if (skuList.length === 0) {
-      console.warn('No valid SKUs in order items');
-      return { 
-        statusCode: 404, 
-        headers, 
-        body: JSON.stringify({ 
-          success: false, 
-          error: 'Order items missing SKUs' 
-        }) 
-      };
-    }
-
-    // Build order response
     const orderOut = {
       id: ord.entity_id,
       increment_id: ord.increment_id,
       grand_total: ord.grand_total,
       created_at: ord.created_at,
-      customer_email: ord.customer_email,
       items: items.map(i => ({ 
         sku: i.sku, 
-        name: i.name || 'Product',
+        name: i.name || '', 
         qty: i.qty_ordered || 1, 
         price: i.price || 0 
       }))
     };
 
-    console.log('✓ Success - Returning order', orderOut.id, 'with', skuList.length, 'SKUs');
+    console.log('✓ Returning order with', skus.length, 'SKUs:', skus);
 
     return {
       statusCode: 200,
@@ -135,28 +113,18 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ 
         success: true, 
         order: orderOut,
-        skus: skuList
+        skus: skus
       })
     };
 
   } catch (error) {
-    console.error('Magento API Error:', {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data
-    });
-
-    let msg = error.response?.data?.message 
-      || error.message 
-      || 'Unknown error';
+    console.error('Error:', error.message);
+    let msg = error.response?.data?.message || error.message;
     
     return { 
       statusCode: error.response?.status || 500, 
       headers, 
-      body: JSON.stringify({ 
-        success: false, 
-        error: msg 
-      }) 
+      body: JSON.stringify({ success: false, error: msg }) 
     };
   }
 };
