@@ -1,17 +1,22 @@
-{
-  "name": "pb-days-game-of-crowns",
-  "version": "1.0.0",
-  "description": "PB Days collectible card rewards system",
-  "main": "index.html",
-  "scripts": {
-    "dev": "netlify dev",
-    "build": "npm install",
-    "deploy": "netlify deploy --prod"
-  },
-  "dependencies": {
-    "axios": "^1.6.0"
-  },
-  "devDependencies": {
-    "netlify-cli": "^17.0.0"
-  }
-}
+[build]
+  command = "npm install"
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[dev]
+  command = "echo 'Dev server ready'"
+  port = 8888
+  targetPort = 8888
+  autoLaunch = false
+
+# Automatically install dependencies in functions
+[[plugins]]
+  package = "@netlify/plugin-functions-install-core"
