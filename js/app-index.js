@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   const deckElem = document.getElementById('card-deck');
 
   // Load user's order/cards from backend
-  const response = await fetch('YOUR_FUNCTION_ENDPOINT', {
+  const response = await fetch('/.netlify/functions/magento-fetch', {
     method:'POST', body:JSON.stringify({email}),
     headers: { 'Content-Type':'application/json' }
   });
