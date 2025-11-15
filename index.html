@@ -3,45 +3,46 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>PB DAYS Game of Crowns — Reveal!</title>
+  <title>PB DAYS · Card Reveal</title>
   <link rel="stylesheet" href="css/styles.css"/>
   <link rel="stylesheet" href="css/uiverse-buttons.css"/>
-  <!-- Open source Clash Royale font -->
-  <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bungee:wght@400&family=Rubik:500&display=swap" rel="stylesheet"/>
+  <script src="js/config.js"></script>
 </head>
 <body>
-<audio id="bg-music" src="https://cdn.pixabay.com/audio/2023/02/17/audio_126b6fcfac.mp3" loop preload="auto"></audio>
-<audio id="reveal-sfx" src="https://cdn.pixabay.com/audio/2023/02/24/audio_128b4a1e98.mp3" preload="auto"></audio>
-<audio id="rare-sfx" src="https://cdn.pixabay.com/audio/2023/02/20/audio_126c323fea.mp3" preload="auto"></audio>
-<div id="main-wrap">
-  <img id="logo-main" src="https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/Game-of-Crowns-Logo.png"
-       alt="PB Days: Game of Crowns" class="logo-main"/>
-  <div class="header-section">
-    <h1>PB DAYS: GAME OF CROWNS</h1>
-    <h2>Your Cards Are...</h2>
-  </div>
-  <div id="loading-cards" class="loading-cards-state">Loading your cards...</div>
-  <section id="reveal-cards" class="card-deck" style="display:none;"></section>
-  <button class="button" id="view-collection-btn" style="display:none;">
-    <div><div><div>View My Collection & Redeem →</div></div></div>
-  </button>
-</div>
-<div id="email-modal" class="modal hidden">
-    <div class="modal-content">
-      <h2>Enter Your Email</h2>
-      <form id="email-form" onsubmit="submitEmail(event)">
-        <input type="email" id="email-input" placeholder="your@email.com" required />
-        <button type="submit" class="button"><div>Continue</div></button>
+  <audio id="bg-music" src="" loop preload="auto"></audio>
+  <audio id="reveal-sfx" src="" preload="auto"></audio>
+  <audio id="rare-sfx" src="" preload="auto"></audio>
+
+  <img id="logo-main" class="logo-main" src="" alt="PB Days Logo"/>
+  <div class="cr-title">PB DAYS: GAME OF CROWNS</div>
+  <div class="cr-subtitle">Get your reward cards<span id="subtitle-order"></span></div>
+
+  <!-- Email Card Entry -->
+  <div class="email-card-box" id="email-card-box" style="display:none;">
+    <div class="cr-card cr-card-pop">
+      <h2 class="cr-card-title">ENTER YOUR EMAIL TO BEGIN</h2>
+      <form id="email-form" autocomplete="off">
+        <input type="email" id="email-input" placeholder="Your Email" class="cr-input" required/>
+        <button type="submit" class="button cr-btn-lg"><div>Continue</div></button>
       </form>
     </div>
-</div>
-<script>
-  // ENV injection is already present on Netlify!
-  // Example in Netlify: window.ENV = { SUPABASE_URL: "...", SUPABASE_KEY: "..." }
-</script>
-<script src="js/config.js"></script>
-<script src="js/reward-logic.js"></script>
-<script src="js/supabase-client.js"></script>
-<script src="js/app-index.js"></script>
+  </div>
+
+  <div id="card-reveal-area">
+    <div id="loading-cards" class="cr-loading" style="display:none;">
+      <div class="cr-spinner"></div>
+      <div style="font-size:1.14em;margin-top:1.2em;">Loading your cards...</div>
+    </div>
+    <div class="cr-card-deck" id="cr-card-deck"></div>
+    <button class="button cr-btn-lg" id="view-collection-btn" style="display:none;margin:0 auto 3.5em auto;">
+      <div><div><div>View My Collection & Redeem →</div></div></div>
+    </button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/reward-logic.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/app-index.js"></script>
 </body>
 </html>
