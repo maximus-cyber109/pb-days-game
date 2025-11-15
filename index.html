@@ -1,278 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#6366f1">
-  <title>PB DAYS: Game of Crowns - Your Rewards</title>
-  
-  <link rel="stylesheet" href="/css/styles.css">
-  
-  <!-- CDN Libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/howler@2.2.3/dist/howler.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>PB DAYS Game of Crowns — Reveal!</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/uiverse-buttons.css" />
+  <!-- Load core font -->
+  <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="container">
-    <!-- Email Modal -->
-    <div id="email-modal" class="modal hidden">
-      <div class="modal-content">
-        <h2>🎴 Enter Your Email</h2>
-        <p>Please enter your email address to view your rewards</p>
-        <form id="email-form" onsubmit="submitEmail(event)">
-          <input 
-            type="email" 
-            id="email-input" 
-            placeholder="your@email.com" 
-            required 
-            autocomplete="email"
-          >
-          <button type="submit" class="btn-primary">Continue</button>
-        </form>
-        <p class="modal-hint">This should be the email used for your order</p>
-      </div>
-    </div>
+  <audio id="bg-music" src=""></audio>
+  <audio id="sfx-reveal" src=""></audio>
+  <audio id="sfx-rare" src=""></audio>
 
-    <!-- Loading State -->
-    <div id="loading" class="loading hidden">
-      <div class="spinner"></div>
-      <p>Processing your rewards...</p>
-      <p class="loading-subtext">Please wait while we calculate your cards</p>
-    </div>
+  <img class="logo-main" id="logo-main" src="" alt="PB Days Game of Crowns" />
 
-    <!-- Error State -->
-    <div id="error" class="error hidden">
-      <div class="error-icon">⚠️</div>
-      <h2>Oops! Something went wrong</h2>
-      <p id="error-message"></p>
-      <button class="btn-primary" onclick="location.reload()">Try Again</button>
-      <button class="btn-secondary" onclick="goToSupport()">Contact Support</button>
+  <main>
+    <div class="header-section">
+      <h1>PB DAYS: GAME OF CROWNS</h1>
+      <h2 id="card-reveal-hd">Your Cards Are...</h2>
     </div>
-
-    <!-- Rewards Container -->
-    <div id="rewards-container" class="hidden">
-      <div class="header-section">
-        <h1>🎴 Your Rewards Await!</h1>
-        <p class="subtitle" id="card-count"></p>
-      </div>
-      
-      <div id="cards-grid" class="cards-grid"></div>
-      
-      <div id="continue-btn" class="continue-section hidden">
-        <button class="btn-primary btn-large" onclick="goToRedemption()">
-          View My Collection & Redeem →
-        </button>
-        <p class="hint-text">You can come back anytime to view your cards</p>
-      </div>
-    </div>
-
-    <!-- Sound Toggle -->
-    <button id="sound-toggle" class="sound-toggle" onclick="toggleSound()">
-      <span id="sound-icon">🔊</span>
+    <section class="card-deck" id="card-deck"></section>
+    <button class="button" id="view-collection-btn" style="display:none;">
+      <div><div><div>View My Collection & Redeem →</div></div></div>
     </button>
+  </main>
+
+  <div id="email-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>Enter Your Email</h2>
+      <form id="email-form" onsubmit="submitEmail(event)">
+        <input type="email" id="email-input" placeholder="your@email.com" required />
+        <button type="submit" class="button"><div>Continue</div></button>
+      </form>
+    </div>
   </div>
-
-  <!-- Load ENV variables from Netlify -->
-  <script>
-    window.ENV = {
-      SUPABASE_URL: '${VITE_SUPABASE_URL}',
-      SUPABASE_KEY: '${VITE_SUPABASE_KEY}',
-      WEBENGAGE_LICENSE: '${WEBENGAGE_LICENSE_CODE}',
-      WEBENGAGE_API_KEY: '${WEBENGAGE_API_KEY}'
-    };
-  </script>
-
-  <!-- Scripts -->
-  <script src="/js/config.js"></script>
-  <script src="/js/reward-logic.js"></script>
-  <script src="/js/supabase-client.js"></script>
-  <script src="/js/animations.js"></script>
-  
-  <script>
-    let currentEmail = null;
-    let soundEnabled = true;
-
-    // Check for email parameter or show modal
-    function checkEmail() {
-      const params = new URLSearchParams(window.location.search);
-      const emailParam = params.get('email');
-
-      if (emailParam && emailParam.trim()) {
-        currentEmail = emailParam.trim().toLowerCase();
-        document.getElementById('email-modal').classList.add('hidden');
-        init();
-      } else {
-        // Show email modal
-        document.getElementById('email-modal').classList.remove('hidden');
-        document.getElementById('email-input').focus();
-      }
-    }
-
-    // Submit email from modal
-    function submitEmail(event) {
-      event.preventDefault();
-      const emailInput = document.getElementById('email-input');
-      currentEmail = emailInput.value.trim().toLowerCase();
-
-      if (currentEmail) {
-        document.getElementById('email-modal').classList.add('hidden');
-        // Update URL with email parameter
-        const newUrl = `${window.location.pathname}?email=${encodeURIComponent(currentEmail)}`;
-        window.history.pushState({}, '', newUrl);
-        init();
-      }
-    }
-
-    // Main initialization
-    async function init() {
-      try {
-        if (!currentEmail) {
-          throw new Error('Email is required');
-        }
-
-        // Show loading
-        document.getElementById('loading').classList.remove('hidden');
-
-        // Initialize sounds
-        initSounds();
-
-        // Load ENV config
-        CONFIG.supabaseUrl = window.ENV.SUPABASE_URL;
-        CONFIG.supabaseKey = window.ENV.SUPABASE_KEY;
-
-        // Initialize Supabase with ENV vars
-        initSupabase();
-
-        console.log('Fetching order for:', currentEmail);
-
-        // Step 1: Fetch order from Magento
-        const orderResponse = await fetch(`${CONFIG.apiUrl}/magento-fetch`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: currentEmail })
-        });
-
-        if (!orderResponse.ok) {
-          throw new Error(`Server error: ${orderResponse.status}`);
-        }
-
-        const orderData = await orderResponse.json();
-        
-        if (!orderData.success) {
-          throw new Error(orderData.error || 'Failed to fetch order');
-        }
-
-        console.log('Order fetched:', orderData.order.id);
-
-        // Step 2: Check if already claimed
-        const alreadyClaimed = await checkOrderClaimed(orderData.order.id);
-        if (alreadyClaimed) {
-          console.log('Order already claimed, redirecting...');
-          window.location.href = `/redemption.html?email=${currentEmail}`;
-          return;
-        }
-
-        // Step 3: Get segment card mapping
-        const segmentCardMap = await getSegmentCardMapping();
-
-        // Step 4: Get products from database
-        const skus = orderData.order.items.map(item => item.sku);
-        const products = await getProductsBySKUs(skus);
-
-        if (!products || products.length === 0) {
-          throw new Error('No products found in database. Please contact support.');
-        }
-
-        console.log('Products found:', products.length);
-
-        // Step 5: Calculate rewards
-        const rewards = calculateOrderRewards(products, segmentCardMap);
-        console.log('Rewards calculated:', rewards);
-
-        // Step 6: Save to database
-        const saveResult = await saveOrderRewards({
-          orderId: orderData.order.id,
-          email: currentEmail,
-          total: orderData.order.grand_total,
-          customerName: orderData.customer?.firstname || 'Customer'
-        }, rewards);
-
-        if (!saveResult.success) {
-          if (saveResult.duplicate) {
-            window.location.href = `/redemption.html?email=${currentEmail}`;
-            return;
-          }
-          throw new Error(saveResult.error);
-        }
-
-        // Step 7: Show rewards!
-        showRewards(rewards);
-
-      } catch (error) {
-        console.error('Initialization error:', error);
-        showError(error.message);
-      }
-    }
-
-    function showRewards(rewards) {
-      document.getElementById('loading').classList.add('hidden');
-      document.getElementById('rewards-container').classList.remove('hidden');
-
-      if (rewards.cards.length === 0 && rewards.totalValueReward > 0) {
-        document.getElementById('card-count').innerHTML = `
-          <div class="value-reward-message">
-            <div class="value-icon">💰</div>
-            <p>You've earned <strong>PB Cash</strong> on your order!</p>
-            <p class="value-amount">₹${rewards.totalValueReward.toFixed(2)}</p>
-          </div>
-        `;
-        document.getElementById('continue-btn').classList.remove('hidden');
-        return;
-      }
-
-      const cardText = rewards.totalCards === 1 ? 'card' : 'cards';
-      const rareText = rewards.totalRareCards > 0 ? 
-        ` (${rewards.totalRareCards} rare ⭐)` : '';
-      
-      document.getElementById('card-count').textContent = 
-        `Revealing ${rewards.totalCards} ${cardText}${rareText}...`;
-
-      const grid = document.getElementById('cards-grid');
-      revealAllCards(rewards.cards, grid);
-
-      setTimeout(() => {
-        document.getElementById('continue-btn').classList.remove('hidden');
-      }, rewards.cards.length * 1500 + 2000);
-    }
-
-    function showError(message) {
-      document.getElementById('loading').classList.add('hidden');
-      document.getElementById('email-modal').classList.add('hidden');
-      document.getElementById('error').classList.remove('hidden');
-      document.getElementById('error-message').textContent = message;
-    }
-
-    function goToRedemption() {
-      if (currentEmail) {
-        window.location.href = `/redemption.html?email=${currentEmail}`;
-      }
-    }
-
-    function goToSupport() {
-      window.location.href = 'mailto:support@pinkblue.com?subject=PB Days Support';
-    }
-
-    function toggleSound() {
-      soundEnabled = !soundEnabled;
-      if (soundManager) {
-        soundManager.toggleMute();
-      }
-      document.getElementById('sound-icon').textContent = soundEnabled ? '🔊' : '🔇';
-    }
-
-    // Start on page load
-    window.addEventListener('DOMContentLoaded', checkEmail);
-  </script>
-</body>
-</html>
+  <script src="js/config.js"></script>
+  <script src="js/reward-logic.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/app-index.js"></script>
+</body></html>
