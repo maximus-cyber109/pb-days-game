@@ -1,3 +1,22 @@
+/**
+ * Returns the segment-code to card-name mapping from Supabase
+ * Assumes the global 'supabase' client is initialized!
+ * Example: { "HD": "LensWarden",  "IC": "Device-Keeper", ...}
+ */
+async function getSegmentCardMapping() {
+  const { data, error } = await supabase
+    .from('segment_cards')
+    .select('segment_code, card_name');
+
+  if (error) {
+    console.error('getSegmentCardMapping error:', error);
+    return {};
+  }
+
+  const map = {};
+  data.forEach(row => map[row.segment_code] = row.card_name);
+  return map;
+}
 const config = window.CR_CONFIG;
 const CARD_IMAGES = config.cards;
 const emailBox = document.getElementById('email-card-box');
