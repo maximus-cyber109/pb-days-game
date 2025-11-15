@@ -1,128 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Russo+One&display=swap');
-body {
-  font-family: 'Russo One', Arial, sans-serif;
-  background: linear-gradient(135deg, #111b2b 70%, #facc15 120%);
-  color: #fff9 !important;
-  min-height: 100vh;
-}
-
-.logo-main {
-  width: clamp(200px, 28vw, 480px);
-  display: block;
-  margin: 1rem auto 2rem auto;
-}
-
-.header-section {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-.glow {
-  filter: drop-shadow(0 0 16px #fd3) drop-shadow(0 0 36px #0cf9);
-  animation: cardGlow 1.3s ease-in-out infinite alternate;
-}
-@keyframes cardGlow {
-  0% { filter: drop-shadow(0 0 32px #0cf8) drop-shadow(0 0 12px #ff0);}
-  100% { filter: drop-shadow(0 0 48px #ffde5b); }
-}
-
-.card-deck {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2rem;
-  margin: 3rem 0 2rem 0;
-}
-
-.card {
-  width: 220px;
-  aspect-ratio: 3/4.4;
-  border-radius: 2rem;
-  background: linear-gradient(135deg, #23272F 60%, #facc153c 125%);
-  border: 4px solid #fde68a;
-  box-shadow: 0 0 42px #fde68a55, 0 2px 18px #0ea5e9aa;
-  position: relative;
-  transition: 0.4s;
-  font-family: 'Russo One', Arial, sans-serif;
-  overflow: hidden;
-}
-
-.card .card-rank-badge {
-  position: absolute;
-  top: 1.2rem;
-  left: 1.2rem;
-  background: #facc15;
-  color: #23272F;
-  border-radius: 1rem;
-  font-size: 1.1rem;
-  font-weight: 700;
-  padding: 0.15em 0.8em;
-  box-shadow: 1px 2px 12px #fde68a;
-  border: 2px solid #23272F;
-}
-.card .card-image {
-  width: 80%;
-  margin: 1.3em auto 0;
-  border-radius: 1rem;
-  background: #0003;
-  display:block;
-}
-.card .card-title {
-  font-size: 1.3rem;
-  padding-top: 0.5rem;
-  text-align:center;
-  color: #facc15;
-  letter-spacing: 1px;
-  text-shadow: 1px 1px 10px #23272F;
-}
-.card .card-count {
-  position: absolute;
-  bottom: 1rem;
-  right: 1rem;
-  min-width: 2.3rem;
-  border: 2px solid #fde68a99;
-  background: linear-gradient(120deg, #facc15aa, #cb8e16ee 85%);
-  color: #23272F;
-  border-radius: 1em;
-  padding: .2em .75em;
-  font-weight: bold;
-  font-size: 1.2em;
-  filter: drop-shadow(0 0 8px #facc15bb);
-  box-shadow: 0 2px 10px #e7d56b;
-  z-index:3;
-}
-.card.rare {
-  border-color: #a21caf;
-  box-shadow: 0 0 60px 18px #a21caf88,0 4px 20px #f472b655;
-  animation: rareGlow 1.2s infinite alternate cubic-bezier(.4,0,.6,1);
-}
-@keyframes rareGlow { 0%{box-shadow:0 0 20px #a21caf} 100%{box-shadow:0 0 30px 10px #fff9,0 0 60px #a21caf} }
-.card.locked {
-  filter: grayscale(0.88) blur(1.1px) brightness(0.72);
-  pointer-events:none;
-  background: repeating-linear-gradient(135deg,#394264 0 16px,#23272F 18px 48px);
-}
-.card .btn-lock { /* lock circle overlay */
-  position: absolute;
-  top: calc(50% - 32px);
-  left: calc(50% - 32px);
-  z-index:10;
-}
-
-.card .badge {
-  position: absolute;
-  top: 0.8rem;
-  right: 1.1rem;
-  background: #ffeaa7;
-  border-radius: 1.2em;
-  color: #a21caf;
-  font-weight: 700;
-  font-size:1.2rem;
-  box-shadow: 0 0 10px #fde68a, 0 2px 8px #23272F;
-  padding: 0.28em 0.9em;
-}
-
-@media(max-width:750px) {
-  .card { width:120px;}
-  .logo-main { width:90vw;}
-  .card-deck { gap:1.2rem;}
-}
+body { font-family: 'Russo One', Arial, sans-serif; background: radial-gradient(circle at 60% 100%, #fde047 0 30%, #111b2b 80%); color: #ffd600; margin:0; }
+.logo-main { width: clamp(220px, 33vw, 420px); margin: 1.6rem auto 1.2rem auto; display:block; }
+.header-section { text-align: center; margin-bottom: 2rem; }
+.card-deck { display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(1.5rem,2vw,2.3rem); margin: 2rem 0 1.6rem 0; }
+.card { width: 192px; height:270px; background: linear-gradient(122deg, #222d3c 50%, #facc15 105%); border-radius:1.6em; border:4px solid #ffe066; box-shadow:0 14px 40px #facc1555,0 3px 13px #292524ee; position:relative; overflow:hidden; display:flex; flex-direction:column; align-items:center; transition:0.34s;}
+.card .card-image { width:88%; margin:1.6em auto 0; border-radius:1em; background: #23272f44; box-shadow:0 3px 13px #37373788;}
+.card .card-title { font-size: 1.25rem; padding-top: .45rem; color:#facc15; text-align:center; text-shadow:1px 2px 5px #23272F;}
+.card .card-count {position:absolute;bottom:1rem; right:1.3rem;background:linear-gradient(103deg,#e6cc7e, #ffd600 80%);color:#23272F;border-radius:1em;padding:.2em .8em;font-weight:800; font-size:1.05em;box-shadow:0 2px 6px #ffe066;z-index:3;}
+.card.rare { border-color: #a21caf; box-shadow: 0 0 60px #a21caf88, 0 0 12px #fff; filter: brightness(1.18) drop-shadow(0 0 5px #f472b6);}
+.card.locked { filter: blur(2.5px) grayscale(85%); position:relative; pointer-events:none;}
+.card.locked:after { content:""; position:absolute;z-index:2;top:0;left:0;width:100%;height:100%;background:rgba(35,36,48,.28);pointer-events:none;}
+.card .lock-overlay { position:absolute; top:28%; left:50%; transform:translate(-50%,0); opacity:.44; z-index:3; width:56px; height:56px;}
+.card .badge { position:absolute; top:1.2rem;right:1.3rem;background:#f472b6;color:#fff;font-weight:bold;font-size:1.2rem;padding:.3em .95em;border-radius:1.2em;box-shadow:0 2px 8px #facc15;}
+.loading-cards-state { text-align:center; font-size:1.2em; color:#fff9; margin-top:2.5em; letter-spacing:0.04em;}
+@media(max-width:750px){ .card{width:118px;height:168px;} .logo-main{width:91vw;} .card-deck{gap:1.1rem;} }
