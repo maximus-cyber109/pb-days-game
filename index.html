@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PB DAYS: My Collection</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="container">
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p>Loading your collection...</p>
+    </div>
+
+    <div id="content" class="hidden">
+      <!-- Header -->
+      <div class="header-section">
+        <h1>🏆 My Card Collection</h1>
+        <p class="subtitle" id="user-email"></p>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="total-cards">0</div>
+          <div class="stat-label">Total Cards</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="rare-cards">0</div>
+          <div class="stat-label">Rare Cards ⭐</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="total-value">₹0</div>
+          <div class="stat-label">Cash Rewards</div>
+        </div>
+      </div>
+
+      <!-- My Cards -->
+      <div class="section">
+        <h2>My Cards</h2>
+        <div id="my-cards-grid" class="cards-grid-small"></div>
+      </div>
+
+      <!-- Redemption Section -->
+      <div class="section" id="redemption-section">
+        <h2>Redemption Options</h2>
+        <div id="redemption-options"></div>
+      </div>
+
+      <!-- Leaderboard -->
+      <div class="section">
+        <h2>🏆 Top Collectors</h2>
+        <div id="leaderboard"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/config.js"></script>
+  <script src="/js/supabase-client.js"></script>
+
+  <script>
+    let currentEmail = null;
+
+    async function init() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        currentEmail = params.get('email');
+
+        if (!currentEmail) {
+          throw new Error('Email parameter required');
+        }
+
+        document.getElementById('user-email').textContent = currentEmail;
+
+        // Load customer data
+        const [cards, valueRewards, stats, leaderboard] = await Promise.all([
+          getCustomerCards(currentEmail),
+          getCustomerValueRewards(currentEmail),
+          getCustomerStats(currentEmail),
+          getLeaderboard(10)
+        ]);
+
+        // Update stats
+        document.getElementById('total-cards').textContent = cards.length;
+        document.getElementById('rare-cards').textContent = 
+          cards.filter(c => c.is_rare).length;
+        
+        const totalValue = valueRewards.reduce((sum, r) => sum + parseFloat(r.reward_amount), 0);
+        document.getElementById('total-value').textContent = `₹${totalValue.toFixed(2)}`;
+
+        // Show cards
+        displayCards(cards);
+
+        // Show redemption options
+        displayRedemptionOptions(cards.length);
+
+        // Show leaderboard
+        displayLeaderboard(leaderboard, currentEmail);
+
+        // Show content
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('content').classList.remove('hidden');
+
+      } catch (error) {
+        console.error('Error:', error);
+        alert(error.message);
+      }
+    }
+
+    function displayCards(cards) {
+      const grid = document.getElementById('my-cards-grid');
+      
+      if (cards.length === 0) {
+        grid.innerHTML = '<p class="no-cards">No cards collected yet</p>';
+        return;
+      }
+
+      grid.innerHTML = cards.map(card => `
+        <div class="card-mini ${card.is_rare ? 'rare' : ''}">
+          <img src="/images/cards/${card.card_name}.png" alt="${card.card_name}">
+          <div class="card-mini-name">${card.card_name}</div>
+          ${card.is_rare ? '<span class="rare-badge-mini">⭐</span>' : ''}
+        </div>
+      `).join('');
+    }
+
+    function displayRedemptionOptions(cardCount) {
+      const container = document.getElementById('redemption-options');
+      
+      if (cardCount === 0) {
+        container.innerHTML = '<p class="info-message">Collect cards to unlock redemption options!</p>';
+        return;
+      }
+
+      let tier = '';
+      let message = '';
+
+      if (cardCount === 1) {
+        tier = 'cash';
+        message = 'Redeem for PB Cash credit on your next order';
+      } else if (cardCount >= 2 && cardCount <= 4) {
+        tier = 'tier1';
+        message = 'Redeem for Bronze Tier Products (2-4 cards)';
+      } else if (cardCount >= 5 && cardCount <= 6) {
+        tier = 'tier2';
+        message = 'Redeem for Silver Tier Products (5-6 cards)';
+      } else if (cardCount >= 7) {
+        tier = 'tier3';
+        message = 'Redeem for Gold Tier Products (7+ cards)';
+      }
+
+      container.innerHTML = `
+        <div class="redemption-card">
+          <div class="redemption-icon">🎁</div>
+          <h3>You have ${cardCount} card${cardCount > 1 ? 's' : ''}</h3>
+          <p>${message}</p>
+          <button class="btn-primary" onclick="startRedemption('${tier}', ${cardCount})">
+            Start Redemption →
+          </button>
+        </div>
+      `;
+    }
+
+    function displayLeaderboard(leaders, currentUserEmail) {
+      const container = document.getElementById('leaderboard');
+      
+      if (leaders.length === 0) {
+        container.innerHTML = '<p>No leaders yet</p>';
+        return;
+      }
+
+      container.innerHTML = leaders.map((leader, index) => {
+        const isCurrentUser = leader.customer_email === currentUserEmail;
+        const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+        
+        return `
+          <div class="leaderboard-row ${isCurrentUser ? 'current-user' : ''}">
+            <div class="rank">${rankIcon || (index + 1)}</div>
+            <div class="leader-info">
+              <div class="leader-name">${leader.customer_name || 'Anonymous'}</div>
+              <div class="leader-email">${isCurrentUser ? '(You)' : ''}</div>
+            </div>
+            <div class="leader-stats">
+              <div class="leader-cards">${leader.total_cards} cards</div>
+              <div class="leader-rare">${leader.total_rare_cards} rare</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function startRedemption(tier, cardCount) {
+      alert(`Redemption for ${tier} tier coming soon! You have ${cardCount} cards.`);
+      // TODO: Implement actual redemption flow
+    }
+
+    // Helper to get value rewards
+    async function getCustomerValueRewards(email) {
+      const { data, error } = await supabase
+        .from('value_rewards')
+        .select('*')
+        .eq('customer_email', email);
+
+      if (error) throw error;
+      return data || [];
+    }
+
+    // Helper to get customer stats
+    async function getCustomerStats(email) {
+      const { data } = await supabase
+        .from('customer_stats')
+        .select('*')
+        .eq('customer_email', email)
+        .single();
+
+      return data;
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
