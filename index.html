@@ -3,48 +3,53 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>PB DAYS · Card Reveal</title>
+  <title>PB DAYS: Reveal Your Cards</title>
   <link rel="stylesheet" href="css/styles.css"/>
   <link rel="stylesheet" href="css/uiverse-buttons.css"/>
-  <link href="https://fonts.googleapis.com/css2?family=Bungee:wght@400&family=Rubik:500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee:wght@400&family=Merriweather:400,700,400italic&display=swap" rel="stylesheet"/>
   <script src="js/config.js"></script>
 </head>
 <body>
+  <img id="logo-main" class="logo-main" src="" alt="PB Days Logo"/>
+  <div class="container">
+
+    <div class="serif-intro">Become a hero of the PB Days realm. Enter your registered email and see which cards fate grants you!</div>
+
+    <div class="cr-title">Card Reveal</div>
+    <!-- Center Email card if missing -->
+    <div class="email-card-box" id="email-card-box" style="display:none;">
+      <div class="cr-card-pop">
+        <h2 class="cr-card-title">Start Your Collection</h2>
+        <form id="email-form" autocomplete="off">
+          <input type="email" id="email-input" placeholder="Your Email" class="cr-input" required/>
+          <button type="submit" class="cr-btn-solid">Reveal My Cards</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Reveal & Loading Area -->
+    <div id="card-reveal-area">
+      <div id="loading-cards" class="cr-loading" style="display:none;">
+        <div class="cr-spinner"></div>
+        <div>Loading your cards...</div>
+      </div>
+      <div class="cr-card-deck" id="cr-card-deck"></div>
+      <button class="cr-btn-solid" id="view-collection-btn" style="display:none;">View My Collection →</button>
+    </div>
+  </div>
+
+  <!-- Audio -->
   <audio id="bg-music" src="" loop preload="auto"></audio>
   <audio id="reveal-sfx" src="" preload="auto"></audio>
   <audio id="rare-sfx" src="" preload="auto"></audio>
 
-  <img id="logo-main" class="logo-main" src="" alt="PB Days Logo"/>
-  <div class="cr-title">PB DAYS: GAME OF CROWNS</div>
-  <div class="cr-subtitle">Get your reward cards<span id="subtitle-order"></span></div>
-
-  <!-- Email Card Entry -->
-  <div class="email-card-box" id="email-card-box" style="display:none;">
-    <div class="cr-card cr-card-pop">
-      <h2 class="cr-card-title">ENTER YOUR EMAIL TO BEGIN</h2>
-      <form id="email-form" autocomplete="off">
-        <input type="email" id="email-input" placeholder="Your Email" class="cr-input" required/>
-        <button type="submit" class="button cr-btn-lg"><div>Continue</div></button>
-      </form>
-    </div>
-  </div>
-
-  <div id="card-reveal-area">
-    <div id="loading-cards" class="cr-loading" style="display:none;">
-      <div class="cr-spinner"></div>
-      <div style="font-size:1.14em;margin-top:1.2em;">Loading your cards...</div>
-    </div>
-    <div class="cr-card-deck" id="cr-card-deck"></div>
-    <button class="button cr-btn-lg" id="view-collection-btn" style="display:none;margin:0 auto 3.5em auto;">
-      <div><div><div>View My Collection & Redeem →</div></div></div>
-    </button>
-  </div>
   <script>
   window.ENV = {
     SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
     SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpemZ1ZHh4bXFvaGxsbGlkY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODM2NjYsImV4cCI6MjA3ODc1OTY2Nn0._VzTpjPudZ9kyq-cHKR-0xJP8rix7pgntjL2Acc3hY0"
   };
 </script>
+  
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/reward-logic.js"></script>
   <script src="js/supabase-client.js"></script>
