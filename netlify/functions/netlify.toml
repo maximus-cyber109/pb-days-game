@@ -3,17 +3,20 @@
   publish = "."
   functions = "netlify/functions"
 
+[functions]
+  node_bundler = "esbuild"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
 [dev]
-  command = "echo 'Serving static files'"
+  command = "echo 'Dev server ready'"
   port = 8888
   targetPort = 8888
   autoLaunch = false
 
-# Optional: Add functions install plugin
+# Automatically install dependencies in functions
 [[plugins]]
   package = "@netlify/plugin-functions-install-core"
