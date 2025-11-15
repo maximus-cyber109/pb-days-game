@@ -1,7 +1,10 @@
 [build]
-  command = "npm install"
+  command = "npm install && npm run inject-env"
   publish = "."
   functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "18"
 
 [functions]
   node_bundler = "esbuild"
@@ -11,12 +14,6 @@
   to = "/index.html"
   status = 200
 
-[dev]
-  command = "echo 'Dev server ready'"
-  port = 8888
-  targetPort = 8888
-  autoLaunch = false
-
-# Automatically install dependencies in functions
+# Replace ENV placeholders in HTML
 [[plugins]]
   package = "@netlify/plugin-functions-install-core"
