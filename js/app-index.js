@@ -1,114 +1,139 @@
-const CARD_IMAGES = {
-  LensWarden:  "https://email-editor-resources.s3.amazonaws.com/images/82618240/LensWarden.png",
-  "Device-Keeper": "https://email-editor-resources.s3.amazonaws.com/images/82618240/Device-Keeper.png",
-  "File-Forger": "https://email-editor-resources.s3.amazonaws.com/images/82618240/File-Forger.png",
-  "Crown-Shaper": "https://email-editor-resources.s3.amazonaws.com/images/82618240/Crown-Shaper.png",
-  "Blade-Bearer": "https://email-editor-resources.s3.amazonaws.com/images/82618240/Blade-Bearer.png",
-  "Tooth-Tyrant": "https://email-editor-resources.s3.amazonaws.com/images/82618240/Tooth-Tyrant.png",
-  "Quick-Cloth":  "https://email-editor-resources.s3.amazonaws.com/images/82618240/Quick-Cloth.png"
-};
-const LOCK_SVG = `<svg class="lock-overlay" viewBox="0 0 60 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <g opacity="0.68">
-    <rect x="10" y="23" width="40" height="23" rx="7" fill="#fff" fill-opacity="0.18"/>
-    <rect x="10" y="23" width="40" height="23" rx="7" stroke="#facc15" stroke-width="3"/>
-    <ellipse cx="30" cy="22" rx="10" ry="12" fill="none" stroke="#facc15" stroke-width="3"/>
-    <rect x="26" y="33" width="8" height="7" rx="4" fill="#facc15" fill-opacity="0.9"/>
-  </g>
-</svg>`;
+const config = window.CR_CONFIG;
+const CARD_IMAGES = config.cards;
 
-function playSFX(type) {
-  let el = document.getElementById(type === 'rare' ? 'rare-sfx' : 'reveal-sfx');
-  if(el) el.currentTime = 0, el.play();
+// --- Email "faux modal" logic ---
+const emailBox = document.getElementById('email-card-box');
+const emailInput = document.getElementById('email-input');
+const form = document.getElementById('email-form');
+const deckElem = document.getElementById('cr-card-deck');
+const logoImg = document.getElementById('logo-main');
+const loadingDiv = document.getElementById('loading-cards');
+const sfxReveal = document.getElementById('reveal-sfx');
+const sfxRare = document.getElementById('rare-sfx');
+const bgMusic = document.getElementById('bg-music');
+let userEmail;
+
+// Set logo and audio src from config
+logoImg.src = config.logo;
+bgMusic.src = config.sounds.bg; // You can change to your own SFX URL
+sfxReveal.src = config.sounds.reveal;
+sfxRare.src = config.sounds.rare;
+
+// Mobile: don't auto-play audio! Only after user interaction
+function enableBGMusic() {
+  if(bgMusic && bgMusic.paused) { try { bgMusic.play(); } catch{} }
+}
+document.body.addEventListener('pointerdown', enableBGMusic, {once:true});
+
+// Email logic
+function finishEmail(email) {
+  userEmail = email.toLowerCase().trim();
+  history.replaceState({}, '', "?email=" + encodeURIComponent(userEmail));
+  emailBox.style.display = 'none';
+  startRevealFlow();
 }
 
-// Email flow
-function submitEmail(e) {
-  e.preventDefault();
-  const email = document.getElementById('email-input').value.toLowerCase().trim();
-  window.location.search = "?email=" + encodeURIComponent(email);
+// Show email card if no query param
+function emailCheck() {
+  const urlParams = new URLSearchParams(window.location.search);
+  let email = urlParams.get("email");
+  if (!email) {
+    emailBox.style.display = "flex";
+    emailInput.value = "";
+    emailInput.focus();
+    form.onsubmit = function(e){
+      e.preventDefault();
+      finishEmail(emailInput.value);
+    };
+    return false;
+  }
+  userEmail = email.toLowerCase();
+  emailBox.style.display = "none";
+  return true;
 }
-function showEmailModal() {
-  document.getElementById('email-modal').classList.remove('hidden');
-  document.getElementById('email-input').focus();
-}
+emailCheck();
 
-document.addEventListener('DOMContentLoaded', async function(){
-  // Only show email modal if missing param
-  const params = new URLSearchParams(window.location.search);
-  let email = params.get('email');
-  if(!email) return showEmailModal();
-  document.getElementById('loading-cards').style.display = "";
+// --- MAIN Reveal logic next ---
+async function startRevealFlow() {
+  // Show loading spinner
+  loadingDiv.style.display = "";
+  deckElem.innerHTML = "";
 
+  // --- 1. SUPABASE ENV ---
   initSupabase();
-
-  // Find latest order id for this email
-  // Assumes a proper backend setup or use .magento-fetch function
-  const cardRes = await fetch('/.netlify/functions/magento-fetch',{
-    method:'POST', body:JSON.stringify({email}),
-    headers:{'Content-Type':'application/json'}
-  }).then(r=>r.json());
-
-  if(!cardRes.success || !cardRes.order || !cardRes.order.id){
-    document.getElementById('loading-cards').innerText = "No eligible order or cards found!";
+  if (!window.supabase) {
+    loadingDiv.innerHTML = "<span style='color:#fff;'>Could not connect to rewards server.<br/><small>Try again in a moment.</small></span>";
     return;
   }
-  // Now fetch this order's cards
-  let { data:cards=[] } = await supabase
+
+  // --- 2. GET latest ORDER for email (call your serverless/netlify function, which must return order id) ---
+  let order = null;
+  try {
+    let resp = await fetch('/.netlify/functions/magento-fetch', {
+      method: "POST",
+      body: JSON.stringify({ email: userEmail }),
+      headers: { 'Content-Type': 'application/json' }
+    }).then(r=>r.json());
+    if(!resp.success || !resp.order || !resp.order.id) throw new Error("No eligible order found.");
+    order = resp.order;
+    document.getElementById("subtitle-order").innerHTML = `<br/><small style="font-family:'Rubik',Arial;color:#b3e3ff;font-size:.82em;">Order #${order.increment_id}</small>`;
+  } catch(e){
+    loadingDiv.innerHTML = `<span style="color:#fff;"><br>No eligible order found for this email!</span>`;
+    return;
+  }
+
+  // --- 3. GET Cards earned for this order ---
+  let { data: cards=[] } = await supabase
     .from('cards_earned')
     .select('card_name, is_rare, quantity')
-    .eq('order_id', cardRes.order.id);
+    .eq("order_id", order.id);
 
-  // Animate reveal, one by one, only for actual cards earned in this order!
-  const revealElem = document.getElementById('reveal-cards');
-  revealElem.style.display = "";
-  document.getElementById('loading-cards').style.display="none";
-  let idx = 0;
-  function revealOneCard() {
-    if(idx >= cards.length) {
+  // --- 4. Render Animation (one by one, only what user earned!) ---
+  if(!cards.length){
+    loadingDiv.innerHTML = `<span style="color:#fbbf24;">No cards earned for this order.<br/>Try another!</span>`;
+    return;
+  }
+
+  loadingDiv.style.display = "none";
+  deckElem.innerHTML = "";
+  let revealed = 0;
+  (function revealCards() {
+    if(revealed >= cards.length) {
       document.getElementById('view-collection-btn').style.display = "block";
       return;
     }
-    let { card_name, is_rare, quantity } = cards[idx];
+    let {card_name, is_rare, quantity} = cards[revealed];
     let cardDiv = document.createElement('div');
-    cardDiv.className = "card glow" + (is_rare?" rare":"");
+    cardDiv.className = "cr-card" + (is_rare?" rare":"");
     // Card image
     let img = document.createElement('img');
-    img.className = "card-image";
+    img.className = "cr-image";
     img.alt = card_name;
     img.src = CARD_IMAGES[card_name] || "";
     cardDiv.appendChild(img);
-
-    // Card title
+    // Card name
     let title = document.createElement('div');
-    title.className = "card-title";
+    title.className = "cr-card-title";
     title.textContent = card_name;
     cardDiv.appendChild(title);
-
     // Count badge
-    if(quantity > 1){
-      let cnt = document.createElement('span');
-      cnt.className = 'card-count';
-      cnt.textContent = "x"+quantity;
-      cardDiv.appendChild(cnt);
+    if(quantity>1){
+      let badge = document.createElement('span');
+      badge.className = 'cr-card-count';
+      badge.textContent = "x" + quantity;
+      cardDiv.appendChild(badge);
     }
     // SFX
-    playSFX(is_rare ? "rare" : "reveal");
-    revealElem.appendChild(cardDiv);
-    idx++;
-    setTimeout(revealOneCard, 900);
-  }
-  if(cards.length) revealOneCard();
-  else document.getElementById('loading-cards').innerText = "No eligible cards earned!";
+    let sfx = is_rare ? sfxRare : sfxReveal;
+    try{ sfx.currentTime=0; sfx.play(); }catch{}
+    deckElem.appendChild(cardDiv);
+    revealed++;
+    setTimeout(revealCards, 780);
+  })();
 
-  // View collection btn
-  document.getElementById('view-collection-btn').onclick = ()=>{
-    window.location.href = "redeem.html?email="+encodeURIComponent(email);
+  // Button: Go to collection
+  document.getElementById('view-collection-btn').onclick = function(){
+    window.location.href = "redeem.html?email=" + encodeURIComponent(userEmail);
   };
-
-  // Music: Only play after first interaction
-  document.body.addEventListener('pointerdown',function firstplay(){
-    let music = document.getElementById('bg-music');
-    if(music) music.play();
-    document.body.removeEventListener('pointerdown',firstplay);
-  });
-});
+}
+if (userEmail) setTimeout(startRevealFlow, 100);
