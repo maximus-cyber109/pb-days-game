@@ -3,35 +3,47 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>PB DAYS · My Collection</title>
+  <title>PB DAYS: My Collection</title>
   <link rel="stylesheet" href="css/styles.css"/>
   <link rel="stylesheet" href="css/uiverse-buttons.css"/>
-  <link href="https://fonts.googleapis.com/css2?family=Bungee:wght@400&family=Rubik:500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee:wght@400&family=Merriweather:400,700,400italic&display=swap" rel="stylesheet"/>
   <script src="js/config.js"></script>
 </head>
 <body>
+  <img id="logo-main" class="logo-main" src="" alt="PB Days Logo"/>
+  <div class="container">
+
+    <div class="cr-title">My Collection</div>
+    <div class="serif-intro" id="email-display"></div>
+
+    <!-- All 7 cards grid -->
+    <div class="cr-card-deck" id="col-deck"></div>
+
+    <!-- Redeem CTA -->
+    <div id="redeem-cta" style="text-align:center;margin:1.6em 0 2.1em 0;"></div>
+
+    <!-- Leaderboard -->
+    <div style="margin-top:2.8em;">
+      <h2 style="font-size:1.3em;color:#da2f11;text-align:center;margin-bottom:1.6em;">🏆 Leaderboard</h2>
+      <div id="leaderboard" style="max-width:500px;margin:0 auto;"></div>
+    </div>
+
+    <div style="text-align:center;margin-top:2.6em;margin-bottom:1.4em;">
+      <button class="cr-btn-solid" id="back-btn">← Back to Reveal</button>
+    </div>
+  </div>
+
+  <!-- Audio -->
   <audio id="bg-music" src="" loop preload="auto"></audio>
   <audio id="sfx-redeem" src="" preload="auto"></audio>
-  <img id="logo-main" class="logo-main" src="" alt="PB Days Logo"/>
-
-  <div class="cr-title">Your Card Collection</div>
-  <div class="cr-subtitle" id="col-email"></div>
-  <div class="cr-card-deck" id="col-deck"></div>
-
-  <div id="redeem-cta" style="text-align:center;margin:1.7em 0;"></div>
-
-  <div class="cr-title" style="font-size:1.27em;margin-top:2.8em;">Leaderboard</div>
-  <div id="leaderboard" style="margin-bottom:2em;"></div>
-
-  <div style="text-align:center;margin-top:2.1em;">
-    <button class="button" id="back-btn"><div><div><div>← Back to Reveal</div></div></div></button>
-  </div>
- <script>
+  <script>
   window.ENV = {
     SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
     SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpemZ1ZHh4bXFvaGxsbGlkY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODM2NjYsImV4cCI6MjA3ODc1OTY2Nn0._VzTpjPudZ9kyq-cHKR-0xJP8rix7pgntjL2Acc3hY0"
   };
 </script>
+  
+  <!-- Supabase + scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/reward-logic.js"></script>
   <script src="js/supabase-client.js"></script>
