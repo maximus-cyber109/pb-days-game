@@ -1,48 +1,37 @@
-// 🔧 CONFIGURATION - All credentials now in ENV
-const CONFIG = {
-  // These will be loaded from window.ENV (set by Netlify)
-  supabaseUrl: null,  // Will be set from ENV
-  supabaseKey: null,  // Will be set from ENV
-  
-  // Netlify Function URL (auto-detected)
-  apiUrl: window.location.origin + '/.netlify/functions',
-  
-  // GitHub raw URLs for card images (update maximus-cyber109 and pb-days-game)
-  cardImagesBaseUrl: 'https://raw.githubusercontent.com/maximus-cyber109/pb-days-game/main/images/cards',
-  cardBackUrl: 'https://raw.githubusercontent.com/maximus-cyber109/pb-days-game/main/images/card-back.png',
-  
-  // Sound effects (can also be on GitHub)
-  SOUNDS: {
-    cardFlip: 'https://raw.githubusercontent.com/maximus-cyber109/pb-days-game/main/sounds/card-flip.mp3',
-    revealRare: 'https://raw.githubusercontent.com/maximus-cyber109/pb-days-game/main/sounds/reveal-rare.mp3',
-    victory: 'https://raw.githubusercontent.com/maximus-cyber109/pb-days-game/main/sounds/victory.mp3'
+// Card art, music and SFX and fonts! Update here anytime.
+window.PB_ASSETS = {
+  // Card image urls. Use remote, your own, or official assets with PNGs (300x420 or up).
+  cards: {
+    LensWarden:    "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/LensWarden.png",
+    "Device-Keeper": "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/Device-Keeper.png",
+    "File-Forger": "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/File-Forger.png",
+    "Crown-Shaper": "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/Crown-Shaper.png",
+    "Blade-Bearer": "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/Blade-Bearer.png",
+    "Tooth-Tyrant": "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/Tooth-Tyrant.png",
+    "Quick-Cloth":  "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/Quick-Cloth.png"
   },
-  
-  // Card names for image URLs
-  cardNames: [
-    'LensWarden',
-    'Device-Keeper',
-    'File-Forger',
-    'Crown-Shaper',
-    'Blade-Bearer',
-    'Tooth-Tyrant',
-    'Quick-Cloth'
-  ],
-  
-  TEST_MODE: false
+
+  // Clash Royale-like logo or PB Days event logo
+  logo: "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/Game-of-Crowns-Logo.png",
+  // Use svg, png, or whatever you want for backgrounds and locks as below, same pattern.
+
+  // Music and sounds (Pixabay, Mixkit, etc. - replace any time)
+  music: {
+    bg:    "https://cdn.pixabay.com/audio/2023/04/20/audio_128b28df86.mp3",   // fantasy bg music
+    reveal: "https://cdn.pixabay.com/audio/2023/03/21/audio_fd55ef36e7.mp3",  // card reveal
+    rare:   "https://cdn.pixabay.com/audio/2022/03/15/audio_115b7ac4ac.mp3",  // rare card
+    click:  "https://cdn.pixabay.com/audio/2022/03/15/audio_128b28df86.mp3"   // fancy button click
+  },
+
+  // Lock SVG for locked cards (embed inline as .svg file or use url)
+  lockIcon: "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/lock.svg",
+
+  // FONTS: Use open-source (Google Fonts, e.g. Russo One or Bungee)
+  fontFamily: "'Russo One', 'Bungee', Arial, sans-serif",
+  fontUrl: "https://fonts.googleapis.com/css2?family=Russo+One&display=swap"
+
+  // Add more such assets (e.g. leader icons, crown svg) as needed, following above.
 };
 
-// Function to get card image URL
-function getCardImageUrl(cardName) {
-  return `${CONFIG.cardImagesBaseUrl}/${cardName}.png`;
-}
-
-// Load ENV variables from Netlify (injected at build time)
-function loadEnvConfig() {
-  // These are injected by Netlify as build environment variables
-  CONFIG.supabaseUrl = '${VITE_SUPABASE_URL}';
-  CONFIG.supabaseKey = '${VITE_SUPABASE_KEY}';
-}
-
-// Initialize on load
-loadEnvConfig();
+// Example usage: window.PB_ASSETS.cards['LensWarden']
+// Example usage: <img src="${PB_ASSETS.cards['LensWarden']}">
