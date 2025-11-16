@@ -24,8 +24,8 @@ window.CR_CONFIG = {
     // ...add up to 10
   ],
   sounds: {
-    bg: "https://audio.com/syed-maaz-ahmed/audio/mixkit-game-level-completed-2059",
-    reveal: "https://audio.com/syed-maaz-ahmed/audio/mixkit-christmas-reveal-tones-2988",
-    redeem: "https://audio.com/syed-maaz-ahmed/audio/mixkit-magic-sweep-game-trophy-257"
+    bg: "https://raw.githubusercontent.com/maximus-cyber109/pb-days-game/main/images/mixkit-unforgiven-890.mp3",
+    reveal: "https://raw.githubusercontent.com/maximus-cyber109/pb-days-game/main/images/mixkit-christmas-reveal-tones-2988.wav",
+    redeem: "https://raw.githubusercontent.com/maximus-cyber109/pb-days-game/main/images/mixkit-magic-sweep-game-trophy-257.wav"
   }
 };
