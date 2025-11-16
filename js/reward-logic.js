@@ -1,62 +1,30 @@
-// reward-logic.js (PB Days, prod-cards, PB Cash, glow)
-
-function calculateProductReward(product, segmentCardMap) {
-  const price = parseFloat(product.product_price);
-  const segmentCode = product.segment_code;
-  const sku = product.p_code;
-  if (price === 0) return { type: 'none' };
-  // PB CASH: Under 1000 = PB Cash, capped to 200
-  if (price > 0 && price < 1000)
-    return { type: 'pb_cash', amount: Math.min(price * 0.01, 200), sku: sku, price: price };
-  // Reward product categories:
-  if (price >= 1000) {
-    let cardName, isRare = false;
-    if (segmentCode === 'CA') {
-      cardName = 'Tooth-Tyrant'; isRare = false;
-    } else if (segmentCode === 'HD') {
-      cardName = price > 10000 ? 'Device-Keeper' : 'Tooth-Tyrant';
-      isRare = price > 10000;
-    } else if (segmentCode === 'IC') {
-      cardName = segmentCardMap[segmentCode] || 'LensWarden'; isRare = true;
-    } else {
-      cardName = segmentCardMap[segmentCode] || 'File-Forger';
-      isRare = price > 10000;
-    }
-    // TIERED: use cardName as a "voucher" for tiers (2-4, 5-7, etc)
-    let rewardTier;
-    if (price >= 1000 && price < 3000) rewardTier = '2-4';
-    else if (price >= 3000 && price < 15000) rewardTier = '5-7';
-    else if (price >= 15000) rewardTier = '8-10';
-    return { type: 'reward_product', cardName, rewardTier, isRare, sku, price };
+// Produces card and reward logic based on SKU/segment DB records or logic
+function calculateRewardsForSKUs(skuObjs, tierProductsMap) {
+  // For PB Cash: Only 1 SKU in order AND price < 1000
+  if (skuObjs.length === 1 && skuObjs[0].product_price < 1000) {
+    return { mode: "pb_cash", pb_cash: Math.round(skuObjs[0].product_price) * 0.01 };
   }
-  return { type: 'none' };
+  // Determine card count for this order/user
+  const userCards = Array.from(
+    new Set(skuObjs.map(sku => sku.segment_code_to_card)) // build the card list
+  );
+  let cardCount = userCards.length;
+  let tier = "";
+  if (cardCount === 1) tier = '1';
+  else if (cardCount >= 2 && cardCount <= 4) tier = '2-4';
+  else if (cardCount >= 5 && cardCount <= 6) tier = '5-6';
+  else if (cardCount === 7) tier = '7';
+
+  return { mode: "cards", userCards, cardCount, tier };
 }
 
-function calculateOrderRewards(products, segmentCardMap) {
-  const pbCash = [], productRewards = [];
-  products.forEach(product => {
-    const reward = calculateProductReward(product, segmentCardMap);
-    if (reward.type === 'pb_cash') pbCash.push(reward);
-    else if (reward.type === 'reward_product') productRewards.push(reward);
-  });
-  return {
-    pbCash,
-    productRewards,
-    totalPB: pbCash.reduce((sum,r)=>sum+r.amount,0),
-    productTiers: [...new Set(productRewards.map(p=>p.rewardTier))]
-  };
-}
-
-// For segment mapping as before
+// getSegmentCardMapping(): fetches from supabase `segment_cards`
 async function getSegmentCardMapping() {
   if (!window.supabase) return {};
   const { data, error } = await supabase
     .from('segment_cards')
     .select('segment_code, card_name');
-  if (error) {
-    console.error('getSegmentCardMapping error:', error);
-    return {};
-  }
+  if (error) { console.error('getSegmentCardMapping error:', error); return {}; }
   const map = {};
   data.forEach(row => map[row.segment_code] = row.card_name);
   return map;
