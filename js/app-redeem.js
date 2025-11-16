@@ -1,21 +1,12 @@
 const config = window.CR_CONFIG;
 const LOGO_URL = config.logo;
-const PRODUCT_TIERS = {
-  '2-4': config.productTier_2_4,
-  '5-6': config.productTier_5_6,
-  '7': config.productTier_7
-};
-const PRODUCT_IMG_FALLBACK = "https://email-editor-resources.s3.amazonaws.com/images/82618240/NiTi-GLIDE-PATH-FILES-BOX-removebg-preview-UPDT.png";
-
-const pbCashSfx = document.getElementById('pb-cash-sfx');
-const redeemSfx = document.getElementById('redeem-sfx');
-const bgMusic = document.getElementById('bg-music');
+const CARD_IMAGES = config.cards;
+const ALL_CARDS = Object.keys(CARD_IMAGES);
 
 let userEmail = new URLSearchParams(location.search).get('email');
-let isOverride = false;
-let overrideInfo = null;
+let userIsOverride = false;
+let overrideCards = [];
 
-// ---- OVERRIDE LOGIC ----
 function getOverrideTier(email) {
   let match = (email || '').match(/-ovrmaaz(\d(?:-\d)?)/);
   if (match) {
@@ -28,200 +19,135 @@ function getOverrideTier(email) {
   return null;
 }
 overrideInfo = getOverrideTier(userEmail);
-isOverride = !!overrideInfo;
+userIsOverride = !!overrideInfo;
+let userCards = [];
+let mainTier = "1";
 
-// ---- PLAY SFX
-function playSfx(sfx) { try { sfx.currentTime = 0; sfx.play(); } catch {} }
-function setBGMusic() {
-  document.body.addEventListener('pointerdown', function bgTryOnce() {
-    try { bgMusic.play(); } catch {}
-    document.body.removeEventListener('pointerdown', bgTryOnce);
-  }, { once: true });
-  try { bgMusic.play(); } catch {}
-}
-setBGMusic();
-
-initSupabase();
-if (!window.supabase) {
-  document.getElementById("col-deck").innerHTML = "<span style='color:#c82b11;'>Could not connect to Supabase.</span>";
-  throw new Error("Supabase not initialized!");
+function renderRockSlider(count) {
+  let out = "";
+  for (let i = 0; i < 7; ++i)
+    out += `<span class="coc-progress-rock${i<count?" earned":""}"></span>`;
+  document.getElementById('slider-rocks').innerHTML = out;
+  document.getElementById('coc-progress-inner').style.width = `${(count/7)*100}%`;
+  document.getElementById('slider-text').innerText = `${count}/7`;
 }
 
+// --- MAIN ---
 (async function mainRedeem() {
-  // --- 1. Cards ---
-  let userCards = [];
-  if (isOverride) {
-    // OVERRIDE: just simulate cards for this admin/test
-    userCards = Object.keys(config.cards).slice(0, overrideInfo.cardCount || 1);
+  if (userIsOverride) {
+    userCards = ALL_CARDS.slice(0, overrideInfo.cardCount);
   } else {
-    // REAL: fetch earned cards for this email
-    let { data: earned = [] } = await supabase
-      .from('cards_earned')
-      .select('card_name')
-      .eq('customer_email', userEmail);
-    userCards = earned.map(c => c.card_name);
+    let { data: earned = [] } = await supabase.from('cards_earned').select('card_name').eq('customer_email', userEmail);
+    userCards = earned.map(c=>c.card_name);
+  }
+  mainTier =  (userCards.length === 1) ? '1'
+          : (userCards.length >= 2 && userCards.length <= 4) ? '2-4'
+          : (userCards.length >= 5 && userCards.length <= 6) ? '5-6'
+          : (userCards.length === 7) ? '7' : '1';
+
+  renderRockSlider(userCards.length);
+
+  // --- Card grid
+  const colDeck = document.getElementById('col-deck');
+  colDeck.innerHTML = "";
+  for (let i = 0; i < 4; ++i) {
+    const cid = userCards[i] || ALL_CARDS[i] || '';
+    let img = document.createElement('img');
+    img.className = "reveal-card-static";
+    img.src = CARD_IMAGES[cid] || config.fallbackCardImg || "";
+    if (userCards.includes(cid)) img.classList.add('revealed');
+    else img.classList.add('locked');
+    colDeck.appendChild(img);
   }
 
-  // --- 2. Show Cards Deck ---
-  const ALL_CARDS = Object.keys(config.cards);
-  const colDeck = document.getElementById('col-deck');
-  colDeck.innerHTML = '';
-  ALL_CARDS.forEach((card, i) => {
-    let owned = userCards.includes(card);
-    let div = document.createElement('div');
-    div.className = "cr-card" + (owned ? " glow" : " locked");
-    div.setAttribute("data-aos", "fade-zoom-in");
-    div.setAttribute("data-aos-delay", `${i*70+210}`);
-    let img = document.createElement('img');
-    img.className = "cr-image";
-    img.alt = card;
-    img.src = config.cards[card] || PRODUCT_IMG_FALLBACK;
-    div.appendChild(img);
-    if (owned) {
-      let badge = document.createElement('span');
-      badge.className = "cr-card-count";
-      badge.textContent = "✓";
-      div.appendChild(badge);
-    }
-    colDeck.appendChild(div);
-  });
+  // --- Card gallery modal
+  let galleryIdx = 0;
+  function updateGallery(idx) {
+    let card = ALL_CARDS[idx];
+    const img = document.getElementById('gallery-card-img');
+    img.src = CARD_IMAGES[card];
+    img.className = "gallery-card-img " + (userCards.includes(card) ? "revealed" : "locked");
+    document.getElementById('gallery-card-name').innerText = card.replace(/-/g, " ");
+  }
+  document.getElementById('open-gallery').onclick = function() {
+    galleryIdx = userCards.length ? ALL_CARDS.indexOf(userCards[0]) : 0;
+    updateGallery(galleryIdx);
+    document.getElementById('gallery-modal').style.display = "flex";
+  }
+  document.getElementById('gallery-left').onclick = function () {
+    galleryIdx = (galleryIdx+ALL_CARDS.length-1) % ALL_CARDS.length;
+    updateGallery(galleryIdx);
+  }
+  document.getElementById('gallery-right').onclick = function () {
+    galleryIdx = (galleryIdx+1) % ALL_CARDS.length;
+    updateGallery(galleryIdx);
+  }
+  document.getElementById('gallery-close').onclick = function () {
+    document.getElementById('gallery-modal').style.display = "none";
+  }
 
-  // --- 3. PB CASH LOGIC ---
-  let pbCashBanner = document.querySelector('.pb-cash-banner');
+  // --- PB Cash modal
   let pbCashAmount = null;
-  if (isOverride && overrideInfo.tier === '1') {
-    pbCashAmount = 40; // example fake value in override mode
-  } else if (!isOverride && userCards.length === 1) {
-    // Only 1 card: must check user's *last earned* order, get SKUs/prices from your real source...
-    let { data: earned = [] } = await supabase.from('cards_earned').select('order_id,earned_at').eq('customer_email',userEmail).order('earned_at', {ascending:false}).limit(1);
-    if (earned[0]) {
-      // Demo: you would fetch order info via API or another table join
-      // let's just say pbCashAmount = orderValue * 0.01
-      pbCashAmount = Math.round(928 * 0.01); // REPLACE with your real logic
-      // --- Only insert to pb_cash table if not already redeemed
-      let { data: exists = [] } = await supabase.from('pb_cash').select('id').eq('email',userEmail);
+  if ((userIsOverride && overrideInfo.tier==='1') || (!userIsOverride && userCards.length===1)) {
+    pbCashAmount = 40; // use live calcs for real mode, e.g. query order/sku from products_ordered
+    document.getElementById('show-pb-cash').style.display = "";
+  }
+  document.getElementById('show-pb-cash').onclick = function() {
+    document.getElementById('pb-cash-text').innerText = `You earned PB CASH: ₹${pbCashAmount || '0'}`;
+    document.getElementById('pb-cash-modal').style.display="flex";
+  }
+  document.getElementById('pb-cash-claim').onclick = async function() {
+    // Write to pb_cash if not already claimed
+    if (!userIsOverride && pbCashAmount) {
+      let { data: exists = [] } = await supabase.from('pb_cash').select('id').eq('email', userEmail);
       if (!exists.length) {
         await supabase.from('pb_cash').insert({ email: userEmail, amount: pbCashAmount, reward_time: new Date().toISOString() });
       }
     }
+    document.getElementById('pb-cash-modal').style.display="none";
   }
-  if (pbCashAmount) {
-    pbCashBanner.innerHTML = `You earned PB CASH: <span class="pb-cash-highlight">&#8377;${pbCashAmount}</span>`;
-    playSfx(pbCashSfx);
-  } else if (userCards.length === 1) {
-    pbCashBanner.innerHTML = `You earned PB CASH!`;
-  } else {
-    pbCashBanner.style.display = "none";
+  document.getElementById('pb-cash-close').onclick = function() {
+    document.getElementById('pb-cash-modal').style.display="none"
   }
 
-  // --- 4. Product Grid For Tiers ---
+  // --- Rewards grid
+  // TODO: fetch live reward pool by tier! Use reward_products for grid (see previous answers for reward table).
+  // The following is a placeholder for one product tile per reward. Replace with reward pool lookup!
   let rewardSection = document.getElementById('reward-section');
-  rewardSection.innerHTML = '';
-  let mainTier = (isOverride) ? overrideInfo.tier : (userCards.length === 1) ? '1'
-          : (userCards.length >= 2 && userCards.length <= 4) ? '2-4'
-          : (userCards.length >= 5 && userCards.length <= 6) ? '5-6'
-          : (userCards.length === 7) ? '7' : '';
-  let maxSelect = mainTier === '2-4' ? 1 : mainTier === '5-6' ? 2 : mainTier === '7' ? 1 : 0;
-  let productsThisTier = (mainTier && PRODUCT_TIERS[mainTier]) ? PRODUCT_TIERS[mainTier] : [];
-
-  // Show grid if >1 card and products available
-  if (productsThisTier.length && mainTier !== '1') {
-    let grid = document.createElement('div');
-    grid.className = "product-grid";
-    // SELECT count enforcement
-    let redeemedCount = 0;
-    for (let idx = 0; idx < productsThisTier.length; idx++) {
-      let p = productsThisTier[idx];
-      let c = document.createElement('div');
-      c.className = "product-card glow";
-      c.setAttribute("data-aos", "fade-zoom-in");
-      c.setAttribute("data-aos-delay", `${idx * 80 + 420}`);
-      let img = document.createElement('img');
-      img.className = "product-img";
-      img.alt = p.name;
-      img.src = p.img;
-      c.appendChild(img);
-
-      let title = document.createElement('div');
-      title.className = 'product-name';
-      title.textContent = p.name;
-      c.appendChild(title);
-
-      // Check stock from DB for real user
-      let isOut = false;
-      if (!isOverride) {
-        // Query product stock
-        // let { data: prod = [] } = await supabase.from('products').select('remainingqty').eq('sku', p.sku);
-        // isOut = !!(prod[0] && prod[0].remainingqty <= 0);
-      }
-
-      let redeemBtn = document.createElement('button');
-      redeemBtn.className = "redeem-btn";
-      redeemBtn.textContent = (isOut) ? "Out of Stock" : "Redeem";
-      redeemBtn.disabled = isOut;
-      redeemBtn.onclick = async function () {
-        if (isOverride) {
-          this.textContent = "Redeemed!";
-          this.disabled = true;
-          playSfx(redeemSfx);
-        } else {
-          // 1. Mark redemption in rewards_redeemed
-          await supabase.from('rewards_redeemed')
-            .insert({ email: userEmail, sku: p.sku, reward_time: new Date().toISOString(), tier: mainTier });
-          // 2. Decrement stock for product in DB
-          // await supabase.rpc('decrement_product_stock', { in_sku: p.sku }); // example if you have a function
-          // 3. Lock product visually
-          this.textContent = "Redeemed!";
-          this.disabled = true;
-          playSfx(redeemSfx);
-        }
-        redeemedCount++;
-        // Enforce only maxSelect products per user
-        if (redeemedCount >= maxSelect) {
-          let allBtns = document.querySelectorAll('.redeem-btn:not([disabled])');
-          allBtns.forEach(btn => btn.disabled = true);
-        }
-      };
-      c.appendChild(redeemBtn);
-      grid.appendChild(c);
-    }
-    rewardSection.appendChild(grid);
-
-    let note = document.createElement('div');
-    note.style = "text-align:center;margin-top:2em;color:#fff8;font-size:.98em;";
-    note.textContent =
-      mainTier === '2-4' ? "You can redeem 1 product for your tier. Unlock more cards for epic rewards."
-      : mainTier === '5-6' ? "You can redeem 2 products for your tier. Unlock all 7 cards for exclusive rewards."
-      : mainTier === '7' ? "You can redeem 1 premium product. You’ve reached the ultimate reward!"
-      : "";
-    rewardSection.appendChild(note);
-  } else if (userCards.length === 1) {
-    let mini = document.createElement('div');
-    mini.style = "text-align:center;margin-top:2.1em;color:#fffa;font-size:1.19em;font-weight:600;";
-    mini.textContent = "Unlock more cards for exciting products!";
-    rewardSection.appendChild(mini);
-  } else {
-    let mini = document.createElement('div');
-    mini.style = "text-align:center;margin-top:3em;color:#fffa;font-size:1.09em;";
-    mini.textContent = "Unlock more cards to reveal exclusive rewards!";
-    rewardSection.appendChild(mini);
+  rewardSection.innerHTML = "";
+  let sampleRewards = [
+    {name:"Reward A",img:config.productImg,tier:"2-4",stock:3},
+    {name:"Reward B",img:config.productImg,tier:"2-4",stock:0},
+    {name:"Reward C",img:config.productImg,tier:"5-6",stock:1}
+  ];
+  for (let r of sampleRewards.filter(x=>x.tier===mainTier)) {
+    let c = document.createElement('div');
+    c.className = "product-card glow";
+    let img = document.createElement('img'); img.className = "product-img"; img.src = r.img; c.appendChild(img);
+    let title = document.createElement('div'); title.className = "product-name"; title.textContent = r.name; c.appendChild(title);
+    let redeemBtn = document.createElement('button');
+    redeemBtn.className = "btn-aqua btn-aqua-large";
+    redeemBtn.textContent = r.stock<=0?"Out of Stock":"Redeem";
+    redeemBtn.disabled = r.stock<=0;
+    redeemBtn.onclick = function() {
+      redeemBtn.textContent = "Redeemed!"; redeemBtn.disabled = true;
+      // Actual redeem logic: decrement reward_products, insert into rewards_redeemed, lock others if max redemptions.
+      // playSfx(redeemSfx);
+    };
+    c.appendChild(redeemBtn);
+    rewardSection.appendChild(c);
   }
 
-  // --- 5. Leaderboard (as before) ---
+  // --- Leaderboard
   let { data: leaders = [] } = await supabase.from('customer_stats')
     .select('customer_email,customer_name,unique_cards')
     .order('unique_cards',{ascending:false}).limit(10);
-
   let lbHtml = (leaders.map((l, i) => `
-    <div style="display:flex;align-items:center;gap:.44em;margin-bottom:.8em;padding:.55em .66em;background:#1c1336b4;border-radius:.88em;border:1px solid #a259ff33;">
-      <span style="font-size:1.26em;color:${i==0?"#ffef87":"#9f3ffe"};font-family:Inter,sans-serif;font-weight:bold;min-width:32px;">${i==0 ? "👑" : i+1}</span>
-      <span style="flex:1;font-family:Inter,sans-serif;font-weight:600;color:#ecebfa;">${l.customer_name||l.customer_email}</span>
-      <span style="background:#a259ff;color:#fff;padding:.31em .66em;border-radius:.7em;font-family:Inter,sans-serif;font-size:.95em;font-weight:bold;">${l.unique_cards||0}</span>
+    <div style="display:flex;align-items:center;gap:.33em;margin-bottom:.8em;padding:.4em .6em;background:#26233d;border-radius:.91em;border:1px solid #a259ff22;">
+      <span style="font-size:1.09em;color:${i==0?"#fedc07":"#7ee3ff"};font-family:Bungee Spice,sans-serif;font-weight:bold;min-width:20px;">${i==0 ? "👑" : i+1}</span>
+      <span style="flex:1;font-family:Bungee Spice,sans-serif;font-weight:600;color:#ecebfa;">${l.customer_name||l.customer_email}</span>
+      <span style="background:#fedc07;color:#222;padding:.23em .5em;border-radius:.7em;font-size:.92em;font-weight:bold;">${l.unique_cards||0}</span>
     </div>
-  `).join("")) || "<span style='color:#888'>No leaderboard yet.</span>";
+  `).join(""));
   document.getElementById("leaderboard").innerHTML = lbHtml;
-
-  document.getElementById('back-btn').onclick = () =>
-      location.href = "index.html?email=" + encodeURIComponent(userEmail);
-
 })();
