@@ -157,10 +157,10 @@ body {
 #reveal-stage {
   margin: 1vh auto;
   width: 95vw;
-  max-width: 500px; /* CHANGED: Made stage wider */
+  max-width: 500px; /* Kept wide for 3 columns */
   height: calc(100vh - 150px); 
   min-height: 450px; 
-  max-height: 800px; /* CHANGED: Increased max height */
+  max-height: 800px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -174,8 +174,8 @@ body {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 92vw; /* CHANGED: Made pop-up card bigger */
-  max-width: 500px; /* CHANGED: Made pop-up card bigger */
+  width: 92vw; 
+  max-width: 550px; /* CHANGED: Made pop-up card even bigger */
   height: auto;
   object-fit: contain;
   filter: drop-shadow(0 0 35px rgba(192, 150, 255, 0.8)) 
@@ -202,17 +202,17 @@ body {
   height: 100%;
   min-height: 300px;
   display: grid;
-  grid-template-columns: 1fr 1fr; /* 2 cards in a row */
-  grid-template-rows: 1fr 1fr;
-  gap: 10px; /* CHANGED: Reduced gap to fit bigger cards */
+  grid-template-columns: 1fr 1fr 1fr; /* CHANGED: 3-column grid */
+  grid-template-rows: 1fr 1fr 1fr; /* 3 rows to handle 7 cards */
+  gap: 10px; 
   justify-items: center;
   align-items: center;
   padding: 10px;
 }
 /* Static cards in the grid */
 .reveal-card-static {
-  width: 45vw; /* CHANGED: Made grid cards bigger */
-  max-width: 240px; /* CHANGED: Made grid cards bigger */
+  width: 28vw; /* CHANGED: Smaller to fit 3-across */
+  max-width: 150px; /* CHANGED: Smaller to fit 3-across */
   height: auto;
   object-fit: contain;
   border-radius: 13px;
@@ -565,17 +565,17 @@ body {
     font-size: 0.8rem;
   }
   .reveal-card-static {
-    width: 42vw; /* Keep it tight on small screens */
-    max-width: 180px;
+    width: 28vw; /* 3-column on mobile */
+    max-width: 150px;
   }
 }
 @media (min-width: 600px) {
   .reveal-card-static {
-    width: 240px; /* CHANGED: Bigger on desktop */
-    max-width: 240px;
+    width: 150px; /* Fixed size on desktop */
+    max-width: 150px;
   }
   .reveal-card-grid {
-    gap: 15px; /* CHANGED: Adjusted gap for desktop */
-    max-width: 540px; /* CHANGED: Wider grid */
+    gap: 20px;
+    max-width: 510px; /* 150*3 + 20*2 */
   }
 }
