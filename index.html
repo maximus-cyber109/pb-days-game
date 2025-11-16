@@ -1,260 +1,135 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>PB Days Card Reveal</title>
-  
-  <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/styles.css"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
-  <script src="js/config.js"></script>
-  
-  <!-- Custom Styles -->
-  <style>
-    html, body {
-      background: #050012;
-      min-height: 100vh;
-      margin: 0;
-      font-family: 'Inter', Arial, sans-serif;
-    }
-    .bg-fx {
-      position: fixed;
-      top: -90px;
-      right: -140px;
-      width: calc(44vw + 180px);
-      height: 51vw;
-      min-width: 380px;
-      z-index: 0;
-      pointer-events: none;
-      background: radial-gradient(circle 45vw at 50vw 2vw, #9013fe41 0%, #111 93%);
-      filter: blur(44px) brightness(1.07) contrast(1.12) opacity(0.68);
-    }
-    .container {
-      position: relative;
-      max-width: 670px;
-      margin: 0 auto;
-      z-index: 2;
-    }
-    .logo-main {
-      display: block;
-      margin: 3.5vh auto 0.6em auto;
-      max-width: 200px;
-      width: 50vw;
-      filter: drop-shadow(0 5px 40px #9f3ffe55);
-    }
-    .main-title {
-      font-size: 2.66rem;
-      font-weight: 800;
-      text-align: center;
-      letter-spacing: -.7px;
-      margin: 0 auto 0.23em auto;
-      color: #fff;
-      line-height: 1.07;
-      filter: drop-shadow(0 6px 36px #da2bff22);
-    }
-    .subtitle {
-      font-size: 1.20rem;
-      font-weight: 500;
-      text-align: center;
-      color: #bac9ff;
-      max-width: 540px;
-      margin: 0 auto 1.7em auto;
-    }
-    .email-card-box {
-      position: fixed;
-      inset: 0;
-      z-index: 99;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(10,0,30,0.91);
-    }
-    .cr-card-pop {
-      background: #240840;
-      border-radius: 1.85em;
-      box-shadow: 0 3px 44px #ac55ffc0;
-      width: min(96vw, 395px);
-      padding: 2em 1.25em 2.2em;
-      text-align: center;
-    }
-    .cr-card-title {
-      font-size: 1.28rem;
-      font-weight: 700;
-      color: #eaadff;
-      margin-bottom: 1.18em;
-    }
-    .cr-input {
-      border-radius: .8em;
-      border: 2.5px solid #a259ff;
-      background: #110b25;
-      color: #fff;
-      font-size: 1.08em;
-      padding: .65em 1.1em;
-      margin-bottom: 1.1em;
-      outline: none;
-      width: 87%;
-      box-shadow: 0 1.5px 0 #e1baff;
-    }
-    .cr-input:focus {
-      border-color: #9013fe;
-      box-shadow: 0 2.5px 0 #d9a5ff;
-    }
-    .cr-btn-main {
-      display: inline-block;
-      background: linear-gradient(98deg, #a259ff 20%, #6a82fb 96%);
-      color: #fff;
-      font-size: 1.18rem;
-      letter-spacing: .01em;
-      padding: .97em 3.4em;
-      border-radius: 99px;
-      font-weight: 700;
-      border: 0;
-      margin: 2.25em 0 0;
-      box-shadow: 0 3px 30px #9f3ffe44;
-      cursor: pointer;
-    }
-    .card-reveal-area {
-      margin: 35px 0 0 0;
-      text-align: center;
-      z-index: 3;
-      position: relative;
-    }
-    .cr-card-deck {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4vw 24px;
-      justify-content: center;
-      margin: 2.3em 0 2.3em;
-    }
-    .cr-card {
-      width: min(235px, 48vw);
-      aspect-ratio: .71;
-      background: none;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      position: relative;
-      filter: drop-shadow(0 0 60px #9913fe88)
-              drop-shadow(0 2px 18px #40c9ffaa);
-      z-index: 2;
-      border-radius: 29px;
-      transition: filter .38s, transform .15s;
-      animation: revealCard 1s cubic-bezier(.29,1.17,.68,1.12) backwards;
-    }
-    @keyframes revealCard {
-      from {
-        opacity: 0;
-        transform: scale(.66) translateY(109px) rotateY(-9deg);
-        filter: blur(22px) brightness(1.13);
-      }
-      to {
-        opacity: 1;
-        filter: blur(0) brightness(1.0);
-        transform: none;
-      }
-    }
-    .cr-card .cr-image {
-      width: 100%;
-      height: auto;
-      object-fit: contain;
-      margin: 0 auto;
-      border-radius: 22px;
-      background: none;
-    }
-    .cr-card.locked {
-      opacity: .23;
-      filter: blur(2.6px) grayscale(92%) brightness(.78);
-      pointer-events: none;
-    }
-    .cr-card .cr-card-count {
-      position: absolute;
-      bottom: -18px;
-      right: 14px;
-      background: linear-gradient(95deg, #fff, #e2d3fd 75%);
-      box-shadow: 0 1px 7px #a259ff67;
-      color: #9013fe;
-      font-weight: 700;
-      border-radius: 21px;
-      font-size: 1.04em;
-      padding: .3em .98em;
-      border: 2px solid #c37bff;
-      z-index: 10;
-    }
-    .cr-loading {
-      color: #a259ff;
-      text-align: center;
-      margin: 3.5em auto 2.3em auto;
-    }
-    .cr-spinner {
-      margin: 1.4em auto;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: 4px solid #a259ff;
-      border-bottom-color: #e9dac7;
-      animation: spin-cr .92s infinite;
-    }
-    @keyframes spin-cr {
-      100% { transform: rotate(360deg);}
-    }
-    @media (max-width: 680px) {
-      .container { max-width: 98vw; }
-      .cr-card { width: min(99vw,185px); }
-      .logo-main { margin-bottom: .9vh; }
-      .main-title { font-size: 1.7rem; }
-      .subtitle { font-size: 1.05rem; }
-    }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>PB Days Card Reveal</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/alphardex/aqua.css@master/dist/aqua.min.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/styles.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css"/>
+<script src="js/config.js"></script>
+<style>
+body {
+  background:#151018;
+  color:#fff;
+  font-family:'Bungee Spice',sans-serif;
+  min-height:100vh;
+  overflow-x:hidden;
+  box-sizing:border-box;
+}
+.bungee-spice-regular { font-family:"Bungee Spice",sans-serif;font-weight:400;font-style:normal;}
+/* stars bg */
+.stars { position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;pointer-events:none;}
+.star { position:absolute;width:3px;height:3px;background:#fff8;border-radius:50%;box-shadow:0 0 8px #fff,0 0 4px #58e0ff88;}
+/* randomly positioned 50 stars! */
+.stars .star:nth-child(1){top:12%;left:5%;}
+.stars .star:nth-child(2){top:42%;left:20%;}
+.stars .star:nth-child(3){top:10%;left:60%;}
+.stars .star:nth-child(4){top:55%;left:85%;}
+.stars .star:nth-child(5){top:32%;left:74%;}
+.stars .star:nth-child(6){top:61%;left:48%;}
+.stars .star:nth-child(7){top:81%;left:15%;}
+.stars .star:nth-child(8){top:29%;left:88%;}
+.stars .star:nth-child(9){top:71%;left:28%;}
+.stars .star:nth-child(10){top:18%;left:91%;}
+.stars .star:nth-child(11){top:13%;left:43%;}
+.stars .star:nth-child(12){top:38%;left:57%;}
+.stars .star:nth-child(13){top:4%;left:96%;}
+.stars .star:nth-child(14){top:85%;left:82%;}
+.stars .star:nth-child(15){top:12%;left:32%;}
+.stars .star:nth-child(16){top:49%;left:11%;}
+.stars .star:nth-child(17){top:95%;left:51%;}
+.stars .star:nth-child(18){top:43%;left:29%;}
+.stars .star:nth-child(19){top:80%;left:62%;}
+.stars .star:nth-child(20){top:59%;left:96%;}
+.stars .star:nth-child(21){top:92%;left:35%;}
+.stars .star:nth-child(22){top:56%;left:67%;}
+.stars .star:nth-child(23){top:23%;left:50%;}
+.stars .star:nth-child(24){top:82%;left:47%;}
+.stars .star:nth-child(25){top:28%;left:15%;}
+.stars .star:nth-child(26){top:65%;left:77%;}
+.stars .star:nth-child(27){top:92%;left:88%;}
+.stars .star:nth-child(28){top:26%;left:34%;}
+.stars .star:nth-child(29){top:43%;left:81%;}
+.stars .star:nth-child(30){top:50%;left:62%;}
+/* animate star twinkle */
+.star { animation:starTwinkle 2.8s linear infinite;}
+.star:nth-child(3n+1) { animation-delay:1.2s;}
+@keyframes starTwinkle {
+  0%,100% { opacity:0.6;}
+  50% { opacity:1;}
+}
+
+.pb-logo {display:block;margin:3vw auto 0 auto;max-width:220px;width:60vw;}
+.card-central-area { position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:340px;margin-top:1vw;}
+.card-main-reveal { position:absolute;top:60px;left:0;right:0;margin:0 auto;z-index:10;transition: all .4s cubic-bezier(.23,1.14,.47,1.11);}
+.card-main-reveal.show {transform:scale(1.0);}
+.card-main-reveal.shrink {transform:scale(0.43) translateY(210px);}
+.card-img-big {width:min(330px,66vw);margin:0 auto;box-shadow:0 0 90px #9db8ff33,0 12px 100px #a264e755;}
+.card-progress-bar-wrap {width:100%;display:flex;align-items:center;justify-content:center;margin:2.2em 0 1.1em 0;}
+.coc-progress-bar { background:linear-gradient(90deg,#993afa,#3aadfd); border-radius:22px; height:33px; width:84%; box-shadow:0 0 23px #91e0ff33; position:relative;}
+.coc-progress-inner { background:linear-gradient(90deg,#faff94 80%,#60e9c8); height:99%; border-radius:22px; box-shadow:0 0 14px #eeff94dd; transition:width .43s cubic-bezier(.43,.87,.37,1.19);}
+.coc-progress-text {
+  font-family:"Bungee Spice",sans-serif;
+  text-shadow:0 2px 8px #0b156e,0 0 3px #fedc07;
+  color:#fff;
+  font-weight:800;
+  letter-spacing:.07em;
+  font-size:1.38rem;
+  position:absolute;
+  left:50%;top:50%;transform:translate(-50%,-50%);
+}
+
+/* 3D BUTTON aqua.css will style it, just use btn-aqua class */
+.btn-aqua-large { font-size:1.21rem;font-family:"Bungee Spice",sans-serif;min-width:70vw;padding:.99em 1.5em;}
+
+
+.modal-bg { position:fixed;top:0;left:0;right:0;bottom:0;z-index:80;background:rgba(23,15,48,.95);display:none;align-items:center;justify-content:center;}
+.modal-fg { background:rgba(31,18,71,.97);box-shadow:0 3px 50px #8a42e977;padding:2.7em 1.65em;border-radius:1.2em;text-align:center;}
+.modal-fg .pb-cash-text { font-size:1.38rem; color:#fffb63; margin:1.2em 0;}
+.show {display:flex!important;}
+</style>
 </head>
 <body>
-  <div class="bg-fx"></div>
-  <div class="container">
-    <img class="logo-main"
-         src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png"
-         alt="PB Days logo"/>
-    <div class="main-title" data-aos="fade-down">PB Days Card Reveal</div>
-    <div class="subtitle" data-aos="fade-up">
-      Become a hero of the PB Days realm. Enter your email and see which cards fate grants you!
-    </div>
-
-    <div class="email-card-box" id="email-card-box" style="display:none;">
-      <div class="cr-card-pop">
-        <div class="cr-card-title">Enter your email to get started</div>
-        <form id="email-form" autocomplete="off">
-          <input type="email"
-                 id="email-input"
-                 placeholder="Your Email"
-                 class="cr-input"
-                 required/>
-          <button type="submit"
-                  class="cr-btn-main"
-                  style="background:#9013fe;box-shadow:0 3px 30px #9013fe57;">
-            Reveal My Cards
-          </button>
-        </form>
-      </div>
-    </div>
-
-    <div class="card-reveal-area">
-      <div id="loading-cards" class="cr-loading" style="display:none;">
-        <div class="cr-spinner"></div>
-        <div>Loading your cards...</div>
-      </div>
-      <div class="cr-card-deck" id="cr-card-deck"></div>
-      <button class="cr-btn-main" id="view-collection-btn" style="display:none;">
-        View My Collection →
-      </button>
-    </div>
+<div class="stars">
+  <div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div>
+  <div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div>
+  <div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div>
+  <div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div>
+  <div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div>
+  <div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div>
+  <div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div>
+  <div class="star"></div><div class="star"></div>
+</div>
+<img src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png" alt="PB Days" class="pb-logo"/>
+<div class="card-progress-bar-wrap">
+  <div class="coc-progress-bar">
+    <div class="coc-progress-inner" id="card-progress"></div>
+    <div class="coc-progress-text" id="card-progress-text">0/7</div>
   </div>
+</div>
+<div style="text-align:center;">
+  <button class="btn-aqua btn-aqua-large" id="view-all-cards" style="margin-top:0.6em;">View All My Cards</button>
+</div>
+<div class="card-central-area" id="card-central-area"></div>
+<div style="text-align:center;margin-top:2.6em;">
+  <button class="btn-aqua btn-aqua-large" id="redeem-btn" style="display:none;">Redeem Cards →</button>
+</div>
 
-  <!-- AUDIO -->
-  <audio id="bg-music" src="" loop preload="auto"></audio>
-  <audio id="reveal-sfx" src="" preload="auto"></audio>
-  <audio id="rare-sfx" src="" preload="auto"></audio>
+<!-- PB Cash Modal -->
+<div class="modal-bg" id="pb-cash-modal">
+  <div class="modal-fg">
+    <div class="pb-cash-text" id="pb-cash-text"></div>
+    <button class="btn-aqua btn-aqua-large" id="pb-cash-claim">Claim PB CASH</button>
+    <button class="btn-aqua btn-aqua-large" style="background:#444;margin-top:.5em;" id="pb-cash-close">Close</button>
+  </div>
+</div>
 
-  <!-- Scripts -->
+<audio id="bg-music" src="" loop preload="auto"></audio>
+<audio id="reveal-sfx" src="" preload="auto"></audio>
+<audio id="rare-sfx" src="" preload="auto"></audio>
+
   <script>
   window.ENV = {
     SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
@@ -262,18 +137,14 @@
   };
 </script>
   
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js"></script>
-  <script src="js/reward-logic.js"></script>
-  <script src="js/supabase-client.js"></script>
-  <script src="js/app-index.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
-  <script>
-    AOS.init({
-      once: true,
-      duration: 1200,
-      easing: 'cubic-bezier(.19,.66,.58,1)'
-    });
-  </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/reward-logic.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/app-index.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+<script>
+AOS.init({once:true,duration:1250,easing:'cubic-bezier(.27,.81,.76,1.07)'});
+</script>
 </body>
 </html>
