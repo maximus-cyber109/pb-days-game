@@ -5,11 +5,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>PB Days Rewards & Redemption</title>
   <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet" />
-  <!-- FIX: Corrected path to your css/styles.css file -->
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
   
+  <!-- Mute Button -->
+  <button id="mute-btn" class="mute-btn">
+    <svg id="icon-unmuted" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256"><path d="M152,216a8,8,0,0,1-8,8H104a8,8,0,0,1-8-8V40a8,8,0,0,1,8-8h40a8,8,0,0,1,8,8ZM200,40a8,8,0,0,0-8,8V208a8,8,0,0,0,16,0V48A8,8,0,0,0,200,40ZM56,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,56,80Z"></path></svg>
+    <svg id="icon-muted" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" style="display:none;"><path d="M152,216a8,8,0,0,1-8,8H104a8,8,0,0,1-8-8V40a8,8,0,0,1,8-8h40a8,8,0,0,1,8,8Zm48-128a8,8,0,0,0-8,8V208a8,8,0,0,0,16,0V96A8,8,0,0,0,200,88Zm-96-48a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V48A8,8,0,0,0,104,40ZM56,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,56,80Z"></path></svg>
+  </button>
+
   <!-- Starfield Background -->
   <div class="stars">
     <div class="star"></div><div class="star"></div><div class="star"></div>
@@ -19,7 +24,14 @@
 
   <img src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png" alt="PB Days" class="pb-logo" />
 
-  <!-- Clash of Clans style progress bar -->
+  <!-- NEW: Auto-scrolling Card Slider -->
+  <div id="card-slider-container" class="card-slider-container" style="display:none;">
+    <div class="card-slider-track" id="card-slider-track">
+      <!-- JS will fill this with earned cards -->
+    </div>
+  </div>
+
+  <!-- Progress bar -->
   <div id="slider-bar-row">
     <div class="coc-progress-bar">
       <div class="coc-progress-inner" id="coc-progress-inner"></div>
@@ -32,8 +44,8 @@
     <button class="btn-3d-glass" id="open-gallery">View All My Cards</button>
   </div>
 
-  <!-- 2x2 Grid for top earned cards -->
-  <div class="cr-card-deck redeem-card-grid" id="col-deck"></div>
+  <!-- REMOVED: 2x2 Card Grid -->
+  <!-- <div class="cr-card-deck redeem-card-grid" id="col-deck"></div> -->
 
   <!-- PB Cash CTA -->
   <div class="button-container" style="margin-top: 1.5em;">
