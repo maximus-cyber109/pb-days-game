@@ -1,6 +1,8 @@
+// config.js: all card/product images, all tier products dynamic
 window.CR_CONFIG = {
+  logo: "https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png",
   cards: {
-    LensWarden:  "https://email-editor-resources.s3.amazonaws.com/images/82618240/LensWarden.png",
+    "LensWarden":  "https://email-editor-resources.s3.amazonaws.com/images/82618240/LensWarden.png",
     "Device-Keeper": "https://email-editor-resources.s3.amazonaws.com/images/82618240/Device-Keeper.png",
     "File-Forger": "https://email-editor-resources.s3.amazonaws.com/images/82618240/File-Forger.png",
     "Crown-Shaper": "https://email-editor-resources.s3.amazonaws.com/images/82618240/Crown-Shaper.png",
@@ -8,11 +10,22 @@ window.CR_CONFIG = {
     "Tooth-Tyrant": "https://email-editor-resources.s3.amazonaws.com/images/82618240/Tooth-Tyrant.png",
     "Quick-Cloth":  "https://email-editor-resources.s3.amazonaws.com/images/82618240/Quick-Cloth.png"
   },
-  logo: "https://raw.githubusercontent.com/maximus-cyber109/pb-days-assets/main/Game-of-Crowns-Logo.png",
-  lockIcon: `data:image/svg+xml;utf8,<svg viewBox='0 0 60 56' fill='none' xmlns='http://www.w3.org/2000/svg'><g opacity='0.68'><rect x='10' y='23' width='40' height='23' rx='7' fill='%23fff' fill-opacity='0.09'/><rect x='10' y='23' width='40' height='23' rx='7' stroke='%23facc15' stroke-width='3'/><ellipse cx='30' cy='22' rx='10' ry='12' fill='none' stroke='%23facc15' stroke-width='3'/><rect x='26' y='33' width='8' height='7' rx='4' fill='%23facc15' fill-opacity='0.9'/></g></svg>`,
+  productTier_2_4: [
+    { name: "SpeedEndo P1(2-4)", sku: "SKU1", img: "https://email-editor-resources.s3.amazonaws.com/images/82618240/NiTi-GLIDE-PATH-FILES-BOX-removebg-preview-UPDT.png" },
+    { name: "SpeedEndo P2(2-4)", sku: "SKU2", img: "https://email-editor-resources.s3.amazonaws.com/images/82618240/NiTi-GLIDE-PATH-FILES-BOX-removebg-preview-UPDT.png" },
+    // ...add up to 10
+  ],
+  productTier_5_6: [
+    { name: "SpeedEndo P1(5-6)", sku: "SKU11", img: "https://email-editor-resources.s3.amazonaws.com/images/82618240/NiTi-GLIDE-PATH-FILES-BOX-removebg-preview-UPDT.png" },
+    // ...add up to 10
+  ],
+  productTier_7: [
+    { name: "SpeedEndo P1(7)", sku: "SKU21", img: "https://email-editor-resources.s3.amazonaws.com/images/82618240/NiTi-GLIDE-PATH-FILES-BOX-removebg-preview-UPDT.png" },
+    // ...add up to 10
+  ],
   sounds: {
-    bg: "https://assets.mixkit.co/music/preview/mixkit-arcade-space-shooter-151.wav",
-    reveal: "https://assets.mixkit.co/sfx/preview/mixkit-quick-win-video-game-notification-269.wav",
-    rare: "https://assets.mixkit.co/sfx/preview/mixkit-magical-game-bonus-2847.wav"
+    bg: "https://audio.com/syed-maaz-ahmed/audio/mixkit-game-level-completed-2059",
+    reveal: "https://audio.com/syed-maaz-ahmed/audio/mixkit-christmas-reveal-tones-2988",
+    redeem: "https://audio.com/syed-maaz-ahmed/audio/mixkit-magic-sweep-game-trophy-257"
   }
 };
