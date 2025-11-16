@@ -148,7 +148,8 @@
 
         // Insert grant to cards_earned for real users (if not already present)
         for (const card of revealCards) {
-          let { data: existing, error }_ = await supabase.from('cards_earned')
+          // FIX: Removed the stray underscore `_` from the end of this line
+          let { data: existing, error } = await supabase.from('cards_earned')
             .select('id')
             .eq('customer_email', userEmail)
             .eq('card_name', card)
