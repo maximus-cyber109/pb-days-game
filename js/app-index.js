@@ -10,103 +10,16 @@
   }
 
   const CARD_IMAGES = config.cards;
-  const sfxReveal = document.getElementById('reveal-sfx');
-  const sfxRare = document.getElementById('rare-sfx');
-  const bgMusic = document.getElementById('bg-music');
   const stage = document.getElementById('reveal-stage');
   const redeemBtn = document.getElementById('reveal-redeem-btn');
-  const muteBtn = document.getElementById('mute-btn');
-  const iconMuted = document.getElementById('icon-muted');
-  const iconUnmuted = document.getElementById('icon-unmuted');
-
-  let isMuted = true; // Start muted until user interacts
-  let userInteracted = false;
-
-  // Sound setup
-  function loadAudio() {
-    try {
-      bgMusic.src = config.sounds.bg;
-      sfxReveal.src = config.sounds.reveal;
-      sfxRare.src = config.sounds.reveal; 
-    } catch (e) {
-      console.warn("Could not set audio sources", e);
-    }
-  }
+  // All audio elements and logic removed
 
   let userEmail = "";
   let userIsOverride = false;
   let overrideCards = [];
   const ALL_CARD_NAMES = Object.keys(CARD_IMAGES);
 
-  // --- Audio Handling ---
-  function playSfx(sfx) {
-    if (isMuted || !userInteracted) return;
-    try {
-      sfx.currentTime = 0;
-      sfx.play();
-    } catch (e) {
-      // console.warn("Audio play failed", e);
-    }
-  }
-
-  function toggleMute() {
-    // This button click also counts as the first interaction
-    if (!userInteracted) {
-        loadAudio();
-        userInteracted = true;
-    }
-    
-    isMuted = !isMuted;
-    
-    if (isMuted) {
-      bgMusic.pause();
-      iconMuted.style.display = 'block';
-      iconUnmuted.style.display = 'none';
-    } else {
-      try {
-        bgMusic.play();
-      } catch(e) {
-          console.warn("BG music play failed.", e);
-      }
-      iconMuted.style.display = 'none';
-      iconUnmuted.style.display = 'block';
-    }
-  }
-  
-  muteBtn.onclick = toggleMute;
-  
-  // FIX: This is the new "first-tap-anywhere" audio unlock
-  function primeAudio() {
-      if (userInteracted) return;
-      userInteracted = true;
-      loadAudio();
-      
-      // Try to play and immediately pause bg music
-      // This "unlocks" the audio context for the browser
-      let playPromise = bgMusic.play();
-      if (playPromise !== undefined) {
-          playPromise.then(_ => {
-              if (isMuted) {
-                bgMusic.pause();
-              }
-          }).catch(error => {
-              // Autoplay was prevented.
-          });
-      }
-  }
-  document.body.addEventListener('pointerdown', primeAudio, { once: true });
-
-
-  // FIX: Pause music when tab is hidden
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      if (!isMuted) bgMusic.pause();
-    } else {
-      if (!isMuted && userInteracted) {
-        bgMusic.play();
-      }
-    }
-  });
+  // --- Audio Handling (REMOVED) ---
 
   // --- Initialization ---
   initSupabase();
@@ -234,71 +147,39 @@
         return;
     }
 
-    // 2. Build the 3-column grid
+    // 2. Build the 2-column grid
     stage.innerHTML = ''; // Clear stage
     const grid = document.createElement('div');
     grid.className = "reveal-card-grid";
 
     let numCards = revealCards.length;
-    // Create 9 slots for a 3x3 grid
-    let slots = [];
-    for (let i = 0; i < numCards; i++) {
-      slots.push({ name: revealCards[i], owned: true });
-    }
     
-    // Fill remaining slots (up to 9) with locked cards
+    // ADDED: Special class to center the 7th card
+    if (numCards === 7) {
+      grid.classList.add('seven-cards');
+    }
+
+    // Determine number of locked cards to show (to make an even 2-column grid)
     let otherCards = ALL_CARD_NAMES.filter(c => !revealCards.includes(c));
-    for (let i = 0; i < (9 - numCards); i++) {
-      slots.push({ name: otherCards[i] || ALL_CARD_NAMES[i % ALL_CARD_NAMES.length], owned: false });
+    let lockCount = 0;
+    if (numCards < 8) {
+        // If 7 cards, add 1 lock. If 5, add 1 lock. If 3, add 1 lock.
+        lockCount = numCards % 2 === 1 ? 1 : 0;
+        // Exception: if 1 card, show 3 locks to make a 2x2 grid
+        if (numCards === 1) lockCount = 3; 
     }
+    
+    // Create slots array
+    let slots = [
+        ...revealCards.map(name => ({ name, owned: true })),
+        ...new Array(lockCount).fill(0).map((_, i) => ({ 
+            name: otherCards[i % otherCards.length], // Use fallback locked cards
+            owned: false 
+        }))
+    ];
 
-    // Add card elements to grid
-    // This will naturally fill the 3x3 grid
-    // For 7 cards: 1,2,3 / 4,5,6 / 7,L,L
-    // We will hide the 8th and 9th (L,L) if they are locked.
-    // Ah, wait. The user wants the 7th in the middle.
-    // [1] [2] [3]
-    // [4] [5] [6]
-    // [L] [7] [L]
-    // This requires placing the 7th card in the 8th grid slot.
-    
-    stage.innerHTML = ''; // Clear stage again
-    grid.innerHTML = '';
-    
-    let gridSlots = new Array(9).fill(null); // 9-slot array
-    let cardIndex = 0;
-    
-    // Fill first 6 slots
-    for(let i = 0; i < 6; i++) {
-        if(cardIndex < numCards) {
-            gridSlots[i] = { name: revealCards[cardIndex], owned: true };
-            cardIndex++;
-        }
-    }
-    
-    // Handle 7th card - put it in the 8th slot (index 7)
-    if(cardIndex < numCards) {
-        gridSlots[7] = { name: revealCards[cardIndex], owned: true };
-        cardIndex++;
-    }
-    
-    // Fill any remaining cards (this shouldn't happen for 7, but good for < 6)
-    while(cardIndex < numCards) {
-        let nextEmpty = gridSlots.indexOf(null);
-        if(nextEmpty === -1) break;
-        gridSlots[nextEmpty] = { name: revealCards[cardIndex], owned: true };
-        cardIndex++;
-    }
-
-    // Fill all remaining 'null' slots with locked cards
-    for(let i = 0; i < 9; i++) {
-        if(gridSlots[i] === null) {
-            gridSlots[i] = { name: otherCards[i % otherCards.length], owned: false };
-        }
-    }
-
-    // Create image elements from the gridSlots array
-    for (const slot of gridSlots) {
+    // Create image elements from the slots array
+    for (const slot of slots) {
       let img = document.createElement('img');
       img.className = "reveal-card-static";
       img.src = CARD_IMAGES[slot.name] || config.logo;
@@ -336,7 +217,7 @@
 
       await delay(50); 
       bigCard.classList.add('is-revealing');
-      playSfx(sfxReveal); // This will work now after first tap
+      // playSfx(sfxReveal); // REMOVED
       
       await delay(1200);
 
