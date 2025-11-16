@@ -23,22 +23,21 @@
   const sfxRedeem = document.getElementById('redeem-sfx');
   const sfxPbCash = document.getElementById('pb-cash-sfx');
   const bgMusic = document.getElementById('bg-music');
+  const muteBtn = document.getElementById('mute-btn');
+  const iconMuted = document.getElementById('icon-muted');
+  const iconUnmuted = document.getElementById('icon-unmuted');
+
+  let isMuted = true; // Start muted until user interacts
+  let userInteracted = false;
+
   try {
     bgMusic.src = config.sounds.bg;
     sfxRedeem.src = config.sounds.redeem;
-    sfxPbCash.src = config.sounds.reveal; // Use reveal sfx for cash
+    sfxPbCash.src = config.sounds.reveal; 
   } catch(e) { console.warn("Could not set audio sources", e); }
   
-  // Setup interaction unlock for BG music/sfx
-  document.body.addEventListener('pointerdown', () => {
-    try {
-      if (bgMusic.paused) bgMusic.play();
-    } catch (e) {
-      // console.warn("BG music play failed", e);
-    }
-  }, { once: true });
-  
   function playSfx(sfx) {
+    if (isMuted || !userInteracted) return;
     try {
       sfx.currentTime = 0;
       sfx.play();
@@ -46,6 +45,36 @@
       // console.warn("Audio play failed", e);
     }
   }
+
+  function toggleMute() {
+    userInteracted = true; // First click counts as interaction
+    isMuted = !isMuted;
+    
+    if (isMuted) {
+      bgMusic.pause();
+      iconMuted.style.display = 'block';
+      iconUnmuted.style.display = 'none';
+    } else {
+      try {
+        bgMusic.play();
+      } catch(e) {}
+      iconMuted.style.display = 'none';
+      iconUnmuted.style.display = 'block';
+    }
+  }
+  
+  muteBtn.onclick = toggleMute;
+
+  // Also try to play on any click if not yet interacted
+  document.body.addEventListener('pointerdown', () => {
+    if (!userInteracted) {
+        userInteracted = true;
+        if (!isMuted) {
+             try { bgMusic.play(); } catch(e) {}
+        }
+    }
+  }, { once: true });
+
 
   // --- Utility ---
   function getOverrideTier(email) {
@@ -61,6 +90,33 @@
   }
   
   // --- UI Rendering ---
+
+  // NEW: Render the auto-scrolling card slider
+  function renderCardSlider(earnedCards) {
+    const container = document.getElementById('card-slider-container');
+    const track = document.getElementById('card-slider-track');
+    if (!container || !track) return;
+
+    if (earnedCards.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = 'block';
+    
+    // Create at least 20 cards for a smooth loop
+    let cardsHtml = '';
+    let cardCount = 0;
+    while (cardCount < 20) {
+        for (const cardName of earnedCards) {
+            cardsHtml += `<img src="${CARD_IMAGES[cardName]}" alt="${cardName}" class="slider-card-img">`;
+            cardCount++;
+        }
+        if (earnedCards.length === 0) break; // Safety break
+    }
+    
+    track.innerHTML = cardsHtml + cardsHtml; // Duplicate track for seamless loop
+  }
 
   function renderRockSlider(count) {
     const container = document.getElementById('slider-rocks');
@@ -78,34 +134,14 @@
     text.innerText = `${count}/${TOTAL_CARDS_TO_COLLECT}`;
   }
   
-  function renderCardGrid() {
-    const colDeck = document.getElementById('col-deck');
-    if (!colDeck) return;
-    
-    colDeck.innerHTML = "";
-    // Show first 4 cards, or placeholders
-    for (let i = 0; i < 4; ++i) {
-      const cardName = ALL_CARDS[i]; // Get card name by index
-      let img = document.createElement('img');
-      img.className = "reveal-card-static";
-      img.src = CARD_IMAGES[cardName] || config.logo;
-      
-      if (userCards.includes(cardName)) {
-        img.classList.add('revealed');
-      } else {
-        img.classList.add('locked');
-      }
-      colDeck.appendChild(img);
-    }
-  }
-  
+  // REMOVED: renderCardGrid() function is no longer needed
+
   async function renderRewardGrid() {
     const rewardSection = document.getElementById('reward-section');
     if (!rewardSection) return;
     
     rewardSection.innerHTML = ""; // Clear
     
-    // Fetch live rewards for this user's tier
     const rewards = await window.getLiveRewardsByTier(mainTier);
     
     if (!rewards || rewards.length === 0) {
@@ -113,7 +149,6 @@
       return;
     }
     
-    // Check which rewards user has *already* redeemed
     let { data: redeemedSKUsData } = await supabase.from('rewards_redeemed')
         .select('sku')
         .eq('email', userEmail);
@@ -188,10 +223,9 @@
     shopMoreBtn.href = "https://pinkblue.in";
     shopMoreBtn.className = "btn-3d-glass shop-more-btn";
     shopMoreBtn.textContent = "Shop More";
-    shopMoreBtn.target = "_blank"; // Open in new tab
+    shopMoreBtn.target = "_blank";
     shopMoreBtn.rel = "noopener noreferrer";
     
-    // Insert it after the leaderboard
     leaderboardEl.parentNode.insertBefore(shopMoreBtn, leaderboardEl.nextSibling);
   }
 
@@ -203,7 +237,6 @@
     button.disabled = true;
 
     try {
-      // Re-check stock in DB (atomic decrement via Supabase function is best, but this is simple check)
       let { data: product, error: fetchError } = await supabase
         .from('reward_products')
         .select('remainingqty')
@@ -215,7 +248,6 @@
         throw new Error("Reward is out of stock.");
       }
 
-      // Decrement stock
       const newQty = product.remainingqty - 1;
       let { error: updateError } = await supabase
         .from('reward_products')
@@ -224,7 +256,6 @@
         
       if (updateError) throw updateError;
 
-      // Log redemption
       let { error: logError } = await supabase
         .from('rewards_redeemed')
         .insert({
@@ -239,14 +270,11 @@
 
       button.textContent = "Redeemed!";
       
-      // TODO: You might want to lock out other redemptions if user
-      // has a limit (e.g., 1 redemption per tier)
-
     } catch (err) {
       console.error("Redemption failed:", err.message);
       if (button.textContent !== "Out of Stock") {
         button.textContent = "Error! Try Again";
-        button.disabled = false; // Allow retry
+        button.disabled = false;
       }
     }
   }
@@ -255,6 +283,13 @@
     const modal = document.getElementById('gallery-modal');
     const cardImg = document.getElementById('gallery-card-img');
     const cardNameEl = document.getElementById('gallery-card-name');
+    const openBtn = document.getElementById('open-gallery');
+    
+    if (!modal || !cardImg || !cardNameEl || !openBtn) {
+        console.error("Gallery modal elements missing!");
+        return;
+    }
+    
     let galleryIdx = 0;
 
     function updateGallery(idx) {
@@ -269,7 +304,7 @@
       }
     }
 
-    document.getElementById('open-gallery').onclick = function() {
+    openBtn.onclick = function() {
       galleryIdx = userCards.length ? ALL_CARDS.indexOf(userCards[0]) : 0;
       if (galleryIdx === -1) galleryIdx = 0;
       updateGallery(galleryIdx);
@@ -296,13 +331,11 @@
     
     let pbCashAmount = 0;
     
-    // Check eligibility (Tier 1 only)
     if (mainTier !== '1') {
       showBtn.style.display = 'none';
       return;
     }
     
-    // Check if already claimed
     let { data: claimed, error } = await supabase.from('pb_cash')
       .select('id')
       .eq('email', userEmail);
@@ -315,19 +348,14 @@
       return;
     }
     
-    // Calculate amount
     if (userIsOverride) {
-      pbCashAmount = 40; // Override amount
+      pbCashAmount = 40;
     } else {
-      // Fetch user's order to calculate
-      // FIX: Changed `let { data: orderData }` to `let orderData`
       let orderData = await fetch('/.netlify/functions/magento-fetch', {
         method: "POST", body: JSON.stringify({ email: userEmail }), headers: { 'Content-Type': 'application/json' }
       }).then(res => res.json());
       
-      // FIX: Added a check to ensure orderData is not undefined before accessing .success
       if (orderData && orderData.success && orderData.order.items) {
-         // Need product prices from products_ordered
          let { data: prods } = await supabase.from('products_ordered')
            .select('p_code, product_price')
            .in('p_code', orderData.order.items.map(i => i.sku));
@@ -336,7 +364,7 @@
            pbCashAmount = window.calculatePbCash(prods);
          }
       } else {
-        console.warn("Could not get order data for PB cash calc:", orderData.error || "No order data");
+        console.warn("Could not get order data for PB cash calc:", (orderData && orderData.error) || "No order data");
       }
     }
     
@@ -345,7 +373,6 @@
       return;
     }
     
-    // Eligible and not claimed
     showBtn.style.display = 'block';
     
     showBtn.onclick = function() {
@@ -389,7 +416,7 @@
       return;
     }
 
-    initSupabase(); // Ensure Supabase is ready
+    initSupabase();
     
     overrideInfo = getOverrideTier(userEmail);
     userIsOverride = !!overrideInfo;
@@ -404,10 +431,8 @@
       
       if (error) {
         console.error("Error fetching user cards:", error);
-        // Handle error
         return;
       }
-      // Get unique card names
       userCards = [...new Set(earned.map(c => c.card_name))];
     }
     
@@ -418,16 +443,16 @@
     mainTier =  (cardCount === 1) ? '1'
             : (cardCount >= 2 && cardCount <= 4) ? '2-4'
             : (cardCount >= 5 && cardCount <= 6) ? '5-6'
-            : (cardCount === 7) ? '7' : '1'; // Default to 1
+            : (cardCount === 7) ? '7' : '1';
     
     console.log(`User tier: ${mainTier} (${cardCount} cards)`);
 
     // 3. Render all UI components
+    renderCardSlider(userCards); // NEW
     renderRockSlider(cardCount);
-    renderCardGrid();
+    // renderCardGrid(); // REMOVED
     setupGalleryModal();
     
-    // These are async and will populate when ready
     await renderRewardGrid();
     await renderLeaderboard();
     await setupPbCashModal();
@@ -436,7 +461,6 @@
 
   } // end mainRedeem
 
-  // Run!
   mainRedeem();
 
 })();
