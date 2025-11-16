@@ -1,175 +1,96 @@
-@import url('https://fonts.googleapis.com/css2?family=Bungee:wght@400&family=Merriweather:400,700,400italic&display=swap');
-
-:root {
-  --parchment: #fcf8f3;
-  --neutral-gray: #dad8d0;
-  --stone: #38312C;
-  --rpciege-orange: #da2f11;
-  --beige: #f4ecd6;
-  --border: #e9dac7;
-  --btn-bg: var(--rpciege-orange);
-}
-html, body {
-  font-family: 'Merriweather', serif;
-  background: var(--parchment);
-  color: var(--stone);
-  min-height: 100vh;
-}
-.logo-main {
-  width: clamp(138px,42vw,220px); margin: 1.8rem auto 1.2rem auto; display: block;
-  filter: drop-shadow(0 2px 12px var(--rpciege-orange));
-}
-h1, .cr-title {
-  font-family: 'Bungee', Arial, sans-serif;
-  font-size: clamp(1.5rem,6vw,2.7rem);
-  color: var(--rpciege-orange);
-  letter-spacing: .04em;
+/* SpeedEndo Product Card PB Cash/Redemption Visuals */
+.pb-cash-banner {
+  margin: 2em auto .7em auto;
+  background: linear-gradient(90deg,#a259ff 10%, #40c9ff 94%);
+  color: #fff;
+  border-radius: 27px;
+  font-size: 1.22rem;
+  font-weight: 600;
   text-align: center;
-  margin:1rem 0 .35rem 0;
-  text-shadow: 1px 1px 0 #fff5,0 2px 16px #da2f1166;
+  max-width: 390px;
+  box-shadow: 0 2px 30px #9b3ffc4c, 0 1px 7px #490ab988;
+  padding: 1.05em 2.2em;
+  letter-spacing: 0.03em;
+  border: 0;
+  position: relative;
+  z-index: 3;
 }
-h2, .cr-card-title {
-  font-family: 'Bungee', Arial,sans-serif;
-  font-size: 1.32rem;
-  color: #c82b11;
-  text-align:center;
-  margin-bottom:.5em;
+.pb-cash-highlight {
+  color: #ffeb3b;
+  text-shadow: 0 2px 12px #ffd700, 0 1px 6px #fff9;
+  font-size: 1.32em; font-weight: 900;
 }
-.serif-intro {
-  font-family: 'Merriweather', serif;
-  font-style: italic;
-  color: #c14a02;
-  font-size: 1.22em;
-  padding: .7em 0 0 0;
+
+.product-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2.3em 4vw;
+  justify-content: center;
+  margin: 1em 0 3em 0;
 }
-.container {
-  background: var(--beige);
-  max-width: 480px;
-  margin: 1.5em auto 0 auto;
-  padding: 2em 1em 3em 1em;
-  border-radius: 17px;
-  border: 2.5px solid var(--border);
-  box-shadow: 0 10px 42px #da2f111b, 0 2px 10px #bfa77445;
+.product-card {
+  background: linear-gradient(120deg, #22203dac 78%, #a259ff63 100%);
+  border-radius: 2.1em;
+  padding: 1.1em .7em 2.2em .7em;
+  box-shadow: 0 10px 38px 0 #9013fe76, 
+              0 2px 18px #40c9ffaa;
+  position:relative;
+  max-width: 224px;
+  width: min(92vw, 210px);
+  min-height: 300px;
+  display:flex;flex-direction:column;align-items:center;z-index:3;
+  border: 0.8px solid #6121ee;
+  animation: fadeZoomIn .9s cubic-bezier(.19,.68,.52,1.18) backwards;
 }
-.cr-card-deck {
-  display: flex; flex-wrap: wrap; gap: 1.1em 1.4em; justify-content: center; margin: 2.1em 0 2.6em 0;
-}
-.cr-card {
-  background: linear-gradient(120deg, #f6f1ea 80%, #f4b0981f), url('https://www.transparenttextures.com/patterns/paper-fibers.png');
-  border-radius: 1.4em;
-  border: 2.5px solid #e9dac7;
-  box-shadow:0 2px 20px #8a6f3750;
-  min-width: 160px; 
-  width: 42vw; 
-  max-width: 220px;  /* BIGGER */
-  aspect-ratio: .71;
-  position:relative; 
-  overflow: hidden;
-  font-family: 'Bungee', Arial, sans-serif;
-  display: flex; 
-  flex-direction: column; 
-  align-items: center;
-}
-.cr-card .cr-image {
-  width: 100%; 
-  height: 100%; 
-  object-fit: cover; 
-  border-radius: 1.4em;  /* Full card image */
-}
-.cr-card .cr-card-title {
-  display: none;  /* HIDE TEXT */
-}
-.cr-card.locked {
-  filter: grayscale(0.6) blur(0.8px) brightness(0.82);  /* LESS BLUR */
-  background: linear-gradient(120deg, #dbd6c5 60%, #b4b4b4 120%);
-  border-color: #bab5a6;
-}
-.cr-card .lock-icon {
-  position: absolute; 
-  z-index:5; 
-  opacity:0.35;  /* Slightly more visible */
-  width:42px; 
-  height:42px; 
-  left:calc(50% - 21px); 
-  top:calc(50% - 21px);
-}
-.cr-card .cr-card-count {
-  position: absolute; 
-  bottom: .66rem; 
-  right: .77rem;
-  border-radius:2em;
-  padding:.28em .88em;
-  background: #fff7e0ee; 
-  color:var(--rpciege-orange);
-  font-family:'Bungee',Arial,sans-serif;
-  font-size: 1.06em; 
-  font-weight:bold;
-  border:1.6px solid #f4b098;
-  box-shadow: 0 2px 10px #ffd60099;
-  z-index: 10;
-}
-@media(max-width:640px){
-  .cr-card {
-    min-width:110px;
-    max-width:140px;  /* mobile bigger */
+@keyframes fadeZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(.7) translateY(80px) rotateY(-5deg);
+    filter: blur(14px) brightness(1.14);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
   }
 }
-.cr-btn-solid {
-  background: var(--btn-bg);
+.product-img {
+  width: 94%;
+  margin-top: .2em;
+  margin-bottom: 1.4em;
+  border-radius:1.4em;
+  background:linear-gradient(98deg,#3d30a5 52%,#a259ff80 100%);
+  box-shadow:0 6px 42px #9013fe83;
+  aspect-ratio: 1/.73;
+  object-fit:contain;
+  z-index:2;
+}
+.product-name {
+  font-size: 1.12rem;
   color: #fff;
-  border-radius: 1em;
-  border: none;
-  font-size: 1.07em;
-  font-weight: bold;
-  letter-spacing:.013em;
-  padding: 1em 2.6em;
-  margin:1.5em auto 0 auto;
-  cursor:pointer;
-  box-shadow: 0 2px 14px #da2f116a, 0 2px 9px #ecce8e77;
-  display:block;
-  transition: background .18s;
+  font-weight: 600;
+  text-align:center;
+  margin-bottom: 1.2em;
+  letter-spacing:0.02em;
+  text-shadow:0 2px 10px #9013fe5a,0 1px 3px #111d;
 }
-.cr-btn-solid:hover {
-  background: #95240e;
+.product-locked {
+  opacity:0.23;filter:blur(2px) grayscale(83%) brightness(.85);
+  pointer-events:none;
 }
-.cr-loading {
-  color: #c82b11; text-align:center;font-family:'Bungee',Arial,sans-serif; margin:3.4em auto 2.3em auto;
-}
-.cr-spinner {
-  margin: 1.4em auto;
-  width:42px;height:42px;border-radius:50%;
-  border:4px solid #da2f11;border-bottom-color:#e9dac7;
-  animation:spin-cr .92s cubic-bezier(.54,0,.61,1.36) infinite;
-}
-@keyframes spin-cr { 100% { transform: rotate(360deg); } }
-.email-card-box {
-  display: flex; align-items:center; justify-content:center;
-  width:100vw; height:100vh; position:fixed; inset:0; z-index:11;
-  background:rgba(237, 219, 189, 0.81);
-}
-.cr-card-pop {
-  background: #fff8de;
-  border-radius: 1.6em;
-  border: 3px solid #e9dac7;
-  box-shadow:0 5px 24px #e9dac799;
-  width: 96vw; max-width: 390px; margin:auto; padding:2.4em 1.3em 2.2em 1.3em;
-  text-align: center;
-}
-.cr-input {
-  border-radius: .7em;
-  border: 1.5px solid #f4b098;
-  background: #f8f7f3;
-  color: #38312C;
+.redeem-btn {
+  margin: 1.3em 0 0 0;
+  padding: .75em 2.8em;
+  background: linear-gradient(93deg,#9013fe 30%,#40c9ff 100%);
+  color: #fff;
   font-size: 1.08em;
-  padding:.61em 1em;
-  margin-bottom: 1em;
-  outline: none; width:85%;
-  box-shadow:0 1.5px 0 #f0cfa7;
-  font-family: 'Merriweather',serif;
+  font-weight: 600;
+  border-radius: 61px;
+  letter-spacing: .02em;
+  border: none;
+  box-shadow:0 4px 30px #9f3ffe48, 0 1px 6px #40c9ffa0;
+  cursor:pointer;
+  transition:background .18s;
 }
-.cr-input:focus { border-color:#da2f11; box-shadow:0 2.5px 0 #f4b098;}
-@media(max-width:640px){
-  .cr-card {min-width:70px;max-width:93px;}
-  .cr-card-title {font-size:.91em;}
-  .container {padding:1.1em .4em;}
-}
+.redeem-btn:active { transform:scale(0.96);}
+.redeem-btn[disabled] {opacity:.5;pointer-events:none;filter:grayscale(1);}
