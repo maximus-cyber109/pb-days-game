@@ -3,237 +3,270 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>PB Days Interactive Reveal</title>
+  <title>PB Days Card Reveal</title>
+  
+  <!-- Stylesheets -->
   <link rel="stylesheet" href="css/styles.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
   <script src="js/config.js"></script>
+  
+  <!-- Custom Styles -->
   <style>
-    body {
-      background: #02010d;
-      color: #f4f4f8;
-      font-family: 'Inter', Arial, sans-serif;
+    html, body {
+      background: #050012;
       min-height: 100vh;
       margin: 0;
-      overflow-x: hidden;
+      font-family: 'Inter', Arial, sans-serif;
     }
-    /* Glowy purple layer */
-    .layer-blur {
-      position: absolute;
-      right: 0; top: 16vh;
-      width: 36vw; height: 30vw; min-width: 320px;
-      background: linear-gradient(135deg,#9013fe6c 0%,#40c9ff 100%);
-      filter: blur(75px) brightness(1.15);
-      z-index: 0; opacity: 0.6; pointer-events: none;
-      border-radius: 42% 58% 69% 31% / 43% 37% 63% 57%;
-      /* this makes the abstract purple style! */
+    .bg-fx {
+      position: fixed;
+      top: -90px;
+      right: -140px;
+      width: calc(44vw + 180px);
+      height: 51vw;
+      min-width: 380px;
+      z-index: 0;
+      pointer-events: none;
+      background: radial-gradient(circle 45vw at 50vw 2vw, #9013fe41 0%, #111 93%);
+      filter: blur(44px) brightness(1.07) contrast(1.12) opacity(0.68);
     }
     .container {
       position: relative;
-      max-width: 780px;
+      max-width: 670px;
       margin: 0 auto;
-      z-index: 1;
-    }
-    .hero {
-      margin-top: 5.5vh;
-      text-align: center;
-      position: relative;
       z-index: 2;
     }
     .logo-main {
       display: block;
-      margin: 0 auto 2vw auto;
-      width: min(200px,40vw);
-      max-width: 240px;
-      filter: drop-shadow(0 4px 70px #9f3ffe) drop-shadow(0 1px 10px #222a) drop-shadow(0 0 5vw #6907b9aa);
+      margin: 3.5vh auto 0.6em auto;
+      max-width: 200px;
+      width: 50vw;
+      filter: drop-shadow(0 5px 40px #9f3ffe55);
     }
     .main-title {
-      font-size: 3rem;
-      font-weight: 600;
-      letter-spacing: -1.5px;
+      font-size: 2.66rem;
+      font-weight: 800;
+      text-align: center;
+      letter-spacing: -.7px;
+      margin: 0 auto 0.23em auto;
       color: #fff;
-      margin-bottom: .33em;
-      margin-top: 0.4em;
-      line-height:1.17;
-      filter: drop-shadow(0 2px 16px #9f3ffe52);
+      line-height: 1.07;
+      filter: drop-shadow(0 6px 36px #da2bff22);
     }
     .subtitle {
-      font-size: 1.23rem;
-      font-weight: 400;
+      font-size: 1.20rem;
+      font-weight: 500;
       text-align: center;
-      color: #c8c7e1;
-      margin-bottom: 1.7em;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
+      color: #bac9ff;
+      max-width: 540px;
+      margin: 0 auto 1.7em auto;
     }
-    /** Card reveal area */
-    #card-reveal-area {
-      margin: 26px auto 0 auto;
+    .email-card-box {
+      position: fixed;
+      inset: 0;
+      z-index: 99;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10,0,30,0.91);
+    }
+    .cr-card-pop {
+      background: #240840;
+      border-radius: 1.85em;
+      box-shadow: 0 3px 44px #ac55ffc0;
+      width: min(96vw, 395px);
+      padding: 2em 1.25em 2.2em;
       text-align: center;
-      z-index:3;
-      position:relative;
+    }
+    .cr-card-title {
+      font-size: 1.28rem;
+      font-weight: 700;
+      color: #eaadff;
+      margin-bottom: 1.18em;
+    }
+    .cr-input {
+      border-radius: .8em;
+      border: 2.5px solid #a259ff;
+      background: #110b25;
+      color: #fff;
+      font-size: 1.08em;
+      padding: .65em 1.1em;
+      margin-bottom: 1.1em;
+      outline: none;
+      width: 87%;
+      box-shadow: 0 1.5px 0 #e1baff;
+    }
+    .cr-input:focus {
+      border-color: #9013fe;
+      box-shadow: 0 2.5px 0 #d9a5ff;
+    }
+    .cr-btn-main {
+      display: inline-block;
+      background: linear-gradient(98deg, #a259ff 20%, #6a82fb 96%);
+      color: #fff;
+      font-size: 1.18rem;
+      letter-spacing: .01em;
+      padding: .97em 3.4em;
+      border-radius: 99px;
+      font-weight: 700;
+      border: 0;
+      margin: 2.25em 0 0;
+      box-shadow: 0 3px 30px #9f3ffe44;
+      cursor: pointer;
+    }
+    .card-reveal-area {
+      margin: 35px 0 0 0;
+      text-align: center;
+      z-index: 3;
+      position: relative;
     }
     .cr-card-deck {
       display: flex;
       flex-wrap: wrap;
-      gap: 3vw 36px;
+      gap: 4vw 24px;
       justify-content: center;
-      margin: 2.1em 0 2.6em 0;
+      margin: 2.3em 0 2.3em;
     }
-    /* Giant card, no bg, glow */
     .cr-card {
-      width: min(220px,46vw);
-      aspect-ratio: .72;
+      width: min(235px, 48vw);
+      aspect-ratio: .71;
       background: none;
       display: flex;
       flex-direction: column;
       align-items: center;
       position: relative;
-      filter: drop-shadow(0 0 36px #d1aefffa) drop-shadow(0 2px 16px #40c9ffaa);
+      filter: drop-shadow(0 0 60px #9913fe88)
+              drop-shadow(0 2px 18px #40c9ffaa);
       z-index: 2;
-      border-radius: 23px;
-      transition: filter 0.35s cubic-bezier(.66,0,1,.84),transform 0.19s cubic-bezier(.34,0,.54,1.33);
-      animation: fadeInUp 0.95s cubic-bezier(.27,1.17,.48,.9) backwards;
+      border-radius: 29px;
+      transition: filter .38s, transform .15s;
+      animation: revealCard 1s cubic-bezier(.29,1.17,.68,1.12) backwards;
     }
-    @keyframes fadeInUp {
-      from { opacity:0; filter: blur(22px) brightness(1.14); transform: translateY(120px) scale(.67);}
-      to { opacity:1; filter: blur(0) brightness(1.0); transform: none;}
+    @keyframes revealCard {
+      from {
+        opacity: 0;
+        transform: scale(.66) translateY(109px) rotateY(-9deg);
+        filter: blur(22px) brightness(1.13);
+      }
+      to {
+        opacity: 1;
+        filter: blur(0) brightness(1.0);
+        transform: none;
+      }
     }
     .cr-card .cr-image {
-      width: 100%; height: auto; object-fit: contain;
+      width: 100%;
+      height: auto;
+      object-fit: contain;
       margin: 0 auto;
-      display: block;
-      background: none!important;
-      border-radius: 18px;
-      /* PNGs are assumed */
+      border-radius: 22px;
+      background: none;
+    }
+    .cr-card.locked {
+      opacity: .23;
+      filter: blur(2.6px) grayscale(92%) brightness(.78);
+      pointer-events: none;
     }
     .cr-card .cr-card-count {
       position: absolute;
-      bottom: -18px; right: 16px;
-      background: linear-gradient(96deg,#fff, #e2d3fd 75%);
-      box-shadow: 0 1px 7px #8e24aa77;
+      bottom: -18px;
+      right: 14px;
+      background: linear-gradient(95deg, #fff, #e2d3fd 75%);
+      box-shadow: 0 1px 7px #a259ff67;
       color: #9013fe;
       font-weight: 700;
-      border-radius: 22px;
-      font-size: 1.11em;
-      padding: .37em .98em;
+      border-radius: 21px;
+      font-size: 1.04em;
+      padding: .3em .98em;
       border: 2px solid #c37bff;
-      z-index:10;
+      z-index: 10;
     }
-    .cr-card.locked {
-      opacity:0.37;
-      filter: blur(2px) brightness(0.84) grayscale(80%);
-      /* simple lock effect; you can increase blur for more lock */
-      pointer-events: none;
-    }
-    .cr-btn-main {
-      display: inline-block;
-      background: linear-gradient(98deg,#a259ff 20%, #6a82fb 96%);
-      color: #fff;
-      font-size: 1.22rem;
-      letter-spacing: .015em;
-      padding: 1.12em 2.9em;
-      border-radius: 99px;
-      font-weight: 600;
-      border: 0;
-      margin: 2.8em 0 0 0;
-      box-shadow:0 3px 40px #9f3ffe55,0 2px 16px #40c9ffaa;
-      transition:background .25s,box-shadow .15s;
-      position:relative;z-index:3;
-      cursor:pointer;
-    }
-    .cr-btn-main:active {
-      transform:scale(0.96);
-      box-shadow:0 2px 8px #784a97;
-    }
-    .cr-btn-main:focus {outline:3px solid #b388ff;}
-    /* Email pseudo-modal for entry */
-    .email-card-box {position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;background:rgba(15,6,31,0.89);}
-    .cr-card-pop {
-      background: #22203d;
-      border-radius:1.7em;
-      box-shadow:0 5px 44px #ac55ffd9;
-      width:min(99vw,400px);
-      margin:auto;
-      padding:2.8em 1.25em 2.4em 1.25em;
+    .cr-loading {
+      color: #a259ff;
       text-align: center;
+      margin: 3.5em auto 2.3em auto;
     }
-    .cr-card-title {
-      font-size:1.23rem;font-weight:600;color:#b38aff;margin-bottom:1.18em;
+    .cr-spinner {
+      margin: 1.4em auto;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 4px solid #a259ff;
+      border-bottom-color: #e9dac7;
+      animation: spin-cr .92s infinite;
     }
-    .cr-input {
-      border-radius: .8em;
-      border: 2.5px solid #a259ff;
-      background: #17062c;
-      color: #fff;
-      font-size: 1.08em;
-      padding:.62em 1em;
-      margin-bottom: 1em;
-      outline: none; width:88%;
-      box-shadow:0 1.5px 0 #e1baff;
-      font-family: 'Inter',sans-serif;
+    @keyframes spin-cr {
+      100% { transform: rotate(360deg);}
     }
-    .cr-input:focus { border-color:#951fff; box-shadow:0 2.5px 0 #d9a5ff;}
-    .cr-loading { color: #a259ff;text-align:center;margin:3.4em auto 2.3em auto;}
-    .cr-spinner {margin: 1.4em auto;width:42px;height:42px;border-radius:50%;border:4px solid #da2f11;border-bottom-color:#e9dac7;animation:spin-cr .92s infinite;}
-    @keyframes spin-cr { 100% { transform: rotate(360deg); } }
-    /* Responsive */
-    @media (max-width:680px) {
-      .container {max-width:97vw;}
-      .cr-card {width: min(97vw,190px);}
-      .logo-main {margin-bottom:1.7vh;}
-      .main-title {font-size:2.2rem;}
-      .subtitle {font-size:1.1rem;}
+    @media (max-width: 680px) {
+      .container { max-width: 98vw; }
+      .cr-card { width: min(99vw,185px); }
+      .logo-main { margin-bottom: .9vh; }
+      .main-title { font-size: 1.7rem; }
+      .subtitle { font-size: 1.05rem; }
     }
   </style>
 </head>
 <body>
-  <div class="layer-blur"></div>
+  <div class="bg-fx"></div>
   <div class="container">
-    <div class="hero" data-aos="fade-down" data-aos-duration="1500">
-      <img class="logo-main" src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png" alt="PB Days logo"/>
-      <div class="main-title" data-aos="fade-up" data-aos-delay="200">PB DAYS</div>
-      <div class="subtitle" data-aos="zoom-in" data-aos-delay="300">Become a hero of the PB Days realm. Enter your email and see which cards fate grants you!</div>
+    <img class="logo-main"
+         src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png"
+         alt="PB Days logo"/>
+    <div class="main-title" data-aos="fade-down">PB Days Card Reveal</div>
+    <div class="subtitle" data-aos="fade-up">
+      Become a hero of the PB Days realm. Enter your email and see which cards fate grants you!
     </div>
 
     <div class="email-card-box" id="email-card-box" style="display:none;">
       <div class="cr-card-pop">
         <div class="cr-card-title">Enter your email to get started</div>
         <form id="email-form" autocomplete="off">
-          <input type="email" id="email-input" placeholder="Your Email" class="cr-input" required/>
-          <button type="submit" class="cr-btn-main" style="background:#9013fe;box-shadow:0 3px 30px #9013fe57;">Reveal My Cards</button>
+          <input type="email"
+                 id="email-input"
+                 placeholder="Your Email"
+                 class="cr-input"
+                 required/>
+          <button type="submit"
+                  class="cr-btn-main"
+                  style="background:#9013fe;box-shadow:0 3px 30px #9013fe57;">
+            Reveal My Cards
+          </button>
         </form>
       </div>
     </div>
 
-    <div id="card-reveal-area">
+    <div class="card-reveal-area">
       <div id="loading-cards" class="cr-loading" style="display:none;">
         <div class="cr-spinner"></div>
         <div>Loading your cards...</div>
       </div>
       <div class="cr-card-deck" id="cr-card-deck"></div>
-      <button class="cr-btn-main" id="view-collection-btn" style="display:none;">View My Collection →</button>
+      <button class="cr-btn-main" id="view-collection-btn" style="display:none;">
+        View My Collection →
+      </button>
     </div>
   </div>
+
+  <!-- AUDIO -->
   <audio id="bg-music" src="" loop preload="auto"></audio>
-  <audio id="reveal-sfx" src="https://audio.com/syed-maaz-ahmed/audio/mixkit-christmas-reveal-tones-2988" preload="auto"></audio>
-  <audio id="rare-sfx" src="https://audio.com/syed-maaz-ahmed/audio/mixkit-christmas-reveal-tones-2988" preload="auto"></audio>
-  <!-- PB: rare sfx can be same or set a diff one -->
-<script>
-  window.ENV = {
-    SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
-    SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpemZ1ZHh4bXFvaGxsbGlkY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODM2NjYsImV4cCI6MjA3ODc1OTY2Nn0._VzTpjPudZ9kyq-cHKR-0xJP8rix7pgntjL2Acc3hY0"
-  };
-</script>
-  
+  <audio id="reveal-sfx" src="" preload="auto"></audio>
+  <audio id="rare-sfx" src="" preload="auto"></audio>
+
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
   <script src="js/reward-logic.js"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/app-index.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
   <script>
-    AOS.init({ once: true, duration: 1200, easing: 'cubic-bezier(.17,.67,.83,.67)' });
+    AOS.init({
+      once: true,
+      duration: 1200,
+      easing: 'cubic-bezier(.19,.66,.58,1)'
+    });
   </script>
 </body>
 </html>
