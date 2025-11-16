@@ -32,9 +32,10 @@
 
   function loadAudio() {
     try {
+      // FIX: Load audio from the config
       bgMusic.src = config.sounds.bg;
       sfxRedeem.src = config.sounds.redeem;
-      sfxPbCash.src = config.sounds.reveal; 
+      sfxPbCash.src = config.sounds.reveal; // Using reveal sound for cash
     } catch(e) { console.warn("Could not set audio sources", e); }
   }
   
@@ -49,11 +50,12 @@
   }
 
   function toggleMute() {
+    // This button click also counts as the first interaction
     if (!userInteracted) {
-        // This is the first interaction, so load the audio
         loadAudio();
+        userInteracted = true;
     }
-    userInteracted = true; // First click counts as interaction
+    
     isMuted = !isMuted;
     
     if (isMuted) {
@@ -73,13 +75,36 @@
   
   muteBtn.onclick = toggleMute;
 
-  // Also try to play on any click if not yet interacted
-  document.body.addEventListener('pointerdown', () => {
-    if (!userInteracted) {
-        // Don't auto-play, wait for mute button click
-        // This prevents the "NotAllowedError"
+  // FIX: This is the new "first-tap-anywhere" audio unlock
+  function primeAudio() {
+      if (userInteracted) return;
+      userInteracted = true;
+      loadAudio();
+      
+      let playPromise = bgMusic.play();
+      if (playPromise !== undefined) {
+          playPromise.then(_ => {
+              if (isMuted) {
+                bgMusic.pause();
+              }
+          }).catch(error => {
+              // Autoplay was prevented.
+          });
+      }
+  }
+  document.body.addEventListener('pointerdown', primeAudio, { once: true });
+
+
+  // FIX: Pause music when tab is hidden
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (!isMuted) bgMusic.pause();
+    } else {
+      if (!isMuted && userInteracted) {
+        bgMusic.play();
+      }
     }
-  }, { once: true });
+  });
 
 
   // --- Utility ---
@@ -110,7 +135,6 @@
 
     container.style.display = 'block';
     
-    // Create at least 20 cards for a smooth loop
     let cardsHtml = '';
     let cardCount = 0;
     while (cardCount < 20) {
@@ -140,8 +164,6 @@
     text.innerText = `${count}/${TOTAL_CARDS_TO_COLLECT}`;
   }
   
-  // REMOVED: renderCardGrid() function is no longer needed
-
   async function renderRewardGrid() {
     const rewardSection = document.getElementById('reward-section');
     if (!rewardSection) return;
@@ -238,7 +260,7 @@
   // --- Event Handlers & Logic ---
 
   async function handleRedeemClick(reward, button) {
-    playSfx(sfxRedeem);
+    playSfx(sfxRedeem); // This will work now
     button.textContent = "Checking...";
     button.disabled = true;
 
@@ -291,6 +313,8 @@
     const cardNameEl = document.getElementById('gallery-card-name');
     const openBtn = document.getElementById('open-gallery');
     
+    // FIX: This check was the problem. The audio error stopped the script
+    // before this point. Now that audio is fixed, this will run.
     if (!modal || !cardImg || !cardNameEl || !openBtn) {
         console.error("Gallery modal elements missing!");
         return;
@@ -456,7 +480,6 @@
     // 3. Render all UI components
     renderCardSlider(userCards); // NEW
     renderRockSlider(cardCount);
-    // renderCardGrid(); // REMOVED
     setupGalleryModal(); // This will now work
     
     await renderRewardGrid();
