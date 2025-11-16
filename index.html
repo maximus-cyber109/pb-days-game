@@ -2,89 +2,64 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>PB Days Reveal</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/alphardex/aqua.css@master/dist/aqua.min.css"/>
-  <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="css/styles.css"/>
-  <style>
-    body { background:#18112a;color:#fff;font-family:"Bungee Spice",sans-serif;min-height:100vh;margin:0; }
-    .stars { position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;pointer-events:none;}
-.star { position:absolute;width:3px;height:3px;background:#fff8;border-radius:50%;box-shadow:0 0 8px #fff,0 0 4px #58e0ff88;}
-/* randomly positioned 50 stars! */
-.stars .star:nth-child(1){top:12%;left:5%;}
-.stars .star:nth-child(2){top:42%;left:20%;}
-.stars .star:nth-child(3){top:10%;left:60%;}
-.stars .star:nth-child(4){top:55%;left:85%;}
-.stars .star:nth-child(5){top:32%;left:74%;}
-.stars .star:nth-child(6){top:61%;left:48%;}
-.stars .star:nth-child(7){top:81%;left:15%;}
-.stars .star:nth-child(8){top:29%;left:88%;}
-.stars .star:nth-child(9){top:71%;left:28%;}
-.stars .star:nth-child(10){top:18%;left:91%;}
-.stars .star:nth-child(11){top:13%;left:43%;}
-.stars .star:nth-child(12){top:38%;left:57%;}
-.stars .star:nth-child(13){top:4%;left:96%;}
-.stars .star:nth-child(14){top:85%;left:82%;}
-.stars .star:nth-child(15){top:12%;left:32%;}
-.stars .star:nth-child(16){top:49%;left:11%;}
-.stars .star:nth-child(17){top:95%;left:51%;}
-.stars .star:nth-child(18){top:43%;left:29%;}
-.stars .star:nth-child(19){top:80%;left:62%;}
-.stars .star:nth-child(20){top:59%;left:96%;}
-.stars .star:nth-child(21){top:92%;left:35%;}
-.stars .star:nth-child(22){top:56%;left:67%;}
-.stars .star:nth-child(23){top:23%;left:50%;}
-.stars .star:nth-child(24){top:82%;left:47%;}
-.stars .star:nth-child(25){top:28%;left:15%;}
-.stars .star:nth-child(26){top:65%;left:77%;}
-.stars .star:nth-child(27){top:92%;left:88%;}
-.stars .star:nth-child(28){top:26%;left:34%;}
-.stars .star:nth-child(29){top:43%;left:81%;}
-.stars .star:nth-child(30){top:50%;left:62%;}
-/* animate star twinkle */
-.star { animation:starTwinkle 2.8s linear infinite;}
-.star:nth-child(3n+1) { animation-delay:1.2s;}
-@keyframes starTwinkle {
-  0%,100% { opacity:0.6;}
-  50% { opacity:1;}
-}
-    
-    .pb-logo {max-width:220px;width:60vw;margin:28px auto 0 auto;display:block;}
-    #reveal-stage {position:relative;width:92vw;max-width:382px;height:75vh;margin:0 auto;display:flex;flex-wrap:wrap;flex-direction:column;align-items:center;justify-content:center;}
-    .reveal-card-big {position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(1.16);transition:all .65s cubic-bezier(.6,1.6,.14,1.06);box-shadow:0 0 60px #93fbff70,0 12px 400px #dbbaff92;}
-    .reveal-card-bg {background:radial-gradient(ellipse at 50% 40%,#9013fe50 33%,#18112a00 100%);border-radius:22px;}
-    .reveal-card-grid {width:100%;height:100%;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:24px 18px;}
-    .reveal-card-static {width:111px;height:156px;object-fit:contain;border-radius:16px;box-shadow:0 0 38px #fff2;}
-    .reveal-card-static.locked {filter:grayscale(1) blur(2px) brightness(.7);}
-    .reveal-card-static.revealed {box-shadow:0 0 60px #acf;border:2px solid #d7aeff;}
-    .floating-redeem-btn {position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:99;background:linear-gradient(145deg,#fefefe 50%,#8e8ef3 100%);box-shadow:0 8px 38px #993affa5;min-width:180px;min-height:62px;font-size:1.32em;border-radius:100px;font-family:"Bungee Spice",sans-serif;cursor:pointer;}
-  </style>
+  <!-- Note: The aqua.css file is no longer used, as we are using custom button styles -->
+  <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<div class="stars">
-  <div class="star"></div> <!-- ...repeat as needed... -->
-</div>
-<img src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png" alt="PB Days" class="pb-logo"/>
-<div id="reveal-stage">
-  <!-- JS will fill with: .reveal-card-big (central, animated in), and after, .reveal-card-grid with revealed cards in correct spots -->
-</div>
-<button class="floating-redeem-btn" id="reveal-redeem-btn" style="display:none;">Redeem Cards</button>
-
-<audio id="bg-music" src="" loop preload="auto"></audio>
-<audio id="reveal-sfx" src="" preload="auto"></audio>
-<audio id="rare-sfx" src="" preload="auto"></audio>
-<script>
-  window.ENV = {
-    SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
-    SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpemZ1ZHh4bXFvaGxsbGlkY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODM2NjYsImV4cCI6MjA3ODc1OTY2Nn0._VzTpjPudZ9kyq-cHKR-0xJP8rix7pgntjL2Acc3hY0"
-  };
-</script>
   
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/config.js"></script>
-<script src="js/reward-logic.js"></script>
-<script src="js/supabase-client.js"></script>
-<script src="js/app-index.js"></script>
+  <!-- Starfield Background -->
+  <div class="stars">
+    <div class="star"></div><div class="star"></div><div class="star"></div>
+    <div class="star"></div><div class="star"></div><div class="star"></div>
+    <div class="star"></div><div class="star"></div><div class="star"></div>
+    <div class="star"></div><div class="star"></div><div class="star"></div>
+    <div class="star"></div><div class="star"></div><div class="star"></div>
+    <div class="star"></div><div class="star"></div><div class="star"></div>
+    <div class="star"></div><div class="star"></div><div class="star"></div>
+    <div class="star"></div><div class="star"></div><div class="star"></div>
+    <div class="star"></div><div class="star"></div><div class="star"></div>
+    <div class="star"></div><div class="star"></div><div class="star"></div>
+  </div>
+
+  <img src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png" alt="PB Days" class="pb-logo" />
+
+  <!-- 
+    This stage is the container for all card animations.
+    app-index.js will:
+    1. Populate the 2x2 grid (.reveal-card-grid) with hidden cards.
+    2. Create and animate the large card (.reveal-card-big) in the center.
+    3. Animate the large card out and "pop" the corresponding grid card.
+  -->
+  <div id="reveal-stage">
+    <!-- JS will fill this area -->
+  </div>
+
+  <!-- This button is hidden until all cards are revealed -->
+  <button class="btn-3d-glass" id="reveal-redeem-btn" style="display:none;">
+    Redeem Cards
+  </button>
+
+  <!-- Audio elements -->
+  <audio id="bg-music" src="" loop preload="auto"></audio>
+  <audio id="reveal-sfx" src="" preload="auto"></audio>
+  <audio id="rare-sfx" src="" preload="auto"></audio>
+
+  <!-- Environment config (injected by Netlify or manually) -->
+  <script>
+    window.ENV = {
+      SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
+      SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpemZ1ZHh4bXFvaGxsbGlkY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODM2NjYsImV4cCI6MjA3ODc1OTY2Nn0._VzTpjPudZ9kyq-cHKR-0xJP8rix7pgntjL2Acc3hY0"
+    };
+  </script>
+  
+  <!-- App scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/reward-logic.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/app-index.js"></script>
 </body>
 </html>
