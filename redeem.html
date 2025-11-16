@@ -1,266 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>PB Days | Rewards & Redemption</title>
-
-  <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
-  <script src="js/config.js"></script>
-
-  <style>
-    body {
-      background: #11091a;
-      color: #ecebfa;
-      margin: 0;
-      font-family: 'Inter', Arial, sans-serif;
-    }
-    .layer-blur {
-      position: fixed;
-      top: 0;
-      right: 0;
-      width: 32vw;
-      height: 29vw;
-      min-width: 198px;
-      z-index: 0;
-      pointer-events: none;
-      filter: blur(60px) brightness(1.12);
-      background: linear-gradient(130deg,#9013fe6c 0%,#40c9ff 101%);
-      opacity: .5;
-      border-radius: 51%;
-    }
-    .container {
-      max-width: 880px;
-      margin: 0 auto;
-      position: relative;
-      z-index: 1;
-      padding-bottom: 60px;
-    }
-    .main-title {
-      font-size: 2.32rem;
-      font-weight: 800;
-      text-align: center;
-      letter-spacing: -.7px;
-      margin-top: 38px;
-      margin-bottom: .3em;
-      color: #fff;
-      filter: drop-shadow(0 10px 36px #9f3ffe52);
-    }
-    .logo-main {
-      display: block;
-      margin: 2.8vh auto 1.3em auto;
-      max-width: 194px;
-      width: 44vw;
-      filter: drop-shadow(0 5px 34px #9013fe50);
-    }
-    .pb-cash-banner {
-      margin: 2em auto .7em auto;
-      background: linear-gradient(90deg,#a259ff 10%, #40c9ff 94%);
-      color: #fff;
-      border-radius: 27px;
-      font-size: 1.22rem;
-      font-weight: 600;
-      text-align: center;
-      max-width: 390px;
-      box-shadow: 0 2px 30px #9b3ffc4c;
-      padding: 1.05em 2.2em;
-      letter-spacing: 0.04em;
-    }
-    .pb-cash-highlight {
-      color: #ffeb3b;
-      text-shadow: 0 2px 12px #ffd700, 0 1px 6px #fff9;
-      font-size: 1.33em;
-      font-weight: 900;
-    }
-    .cr-card-deck {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 2.3em 2vw;
-      justify-content: center;
-      margin: 2.3em 0 2.3em;
-    }
-    .cr-card {
-      width: min(203px,37vw);
-      aspect-ratio: .71;
-      background: none;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      position: relative;
-      filter: drop-shadow(0 0 48px #d1aeffae) drop-shadow(0 2px 16px #40c9ffaa);
-      z-index: 2;
-      border-radius: 27px;
-      transition: filter .38s cubic-bezier(.71,0,1,.77), transform .18s;
-      animation: fadeZoomIn .97s cubic-bezier(.21,1.1,.41,1.12) backwards;
-    }
-    @keyframes fadeZoomIn {
-      from {
-        opacity: 0;
-        transform: scale(0.74) translateY(70px);
-        filter: blur(17px) brightness(1.13);
-      }
-      to {
-        opacity: 1;
-        filter: none;
-        transform: none;
-      }
-    }
-    .cr-card .cr-image {
-      width: 100%;
-      object-fit: contain;
-      margin: 0 auto;
-      border-radius: 22px;
-    }
-    .cr-card.locked {
-      opacity: .19;
-      filter: blur(2.6px) grayscale(90%) brightness(.75);
-      pointer-events: none;
-    }
-    .cr-card .cr-card-count {
-      position: absolute;
-      bottom: -15px;
-      right: 14px;
-      background: linear-gradient(95deg,#fff,#e2d3fd 75%);
-      box-shadow: 0 1px 7px #a259ff67;
-      color: #9013fe;
-      font-weight: 700;
-      border-radius: 17px;
-      font-size: 1.09em;
-      padding: .27em .93em;
-      border: 2px solid #c37bff;
-      z-index: 12;
-    }
-    .mini-title {
-      color: #b388ff;
-      text-align: center;
-      font-weight: 700;
-      font-size: 1.31rem;
-      letter-spacing: .02em;
-      margin-top: 30px;
-    }
-    .section-box {
-      background: #160f31e6;
-      border-radius: 23px;
-      box-shadow: 0 1px 20px #a259ff2c;
-      padding: 1.6em 1.1em;
-      margin-bottom: 2.1em;
-    }
-    .product-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 2em 3vw;
-      justify-content: center;
-      margin: 1em 0 3em 0;
-    }
-    .product-card {
-      background: linear-gradient(123deg,#221a3a 73%,#a259ff75 100%);
-      border-radius: 2.2em;
-      box-shadow: 0 8px 37px 0 #9013fe28, 0 2px 14px #40c9ffaa;
-      max-width: 210px;
-      width: min(92vw,198px);
-      min-height: 255px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      z-index: 3;
-      border: 0.9px solid #6f33f7;
-      animation: fadeZoomIn .93s cubic-bezier(.19,.68,.52,1.18) backwards;
-    }
-    .product-img {
-      width: 98%;
-      margin-top: .45em;
-      margin-bottom: 1.17em;
-      border-radius: 1.5em;
-      background: linear-gradient(91deg,#422e6a 51%,#993fff70 99%);
-      box-shadow: 0 12px 31px #9013fe67;
-      aspect-ratio: 1/.69;
-      object-fit: contain;
-    }
-    .product-name {
-      font-size: 1.09rem;
-      color: #fff;
-      font-weight: 600;
-      text-align: center;
-      margin-bottom: 1.12em;
-      letter-spacing: 0.01em;
-      text-shadow: 0 2px 11px #9013fe3a;
-    }
-    .product-locked {
-      opacity: 0.20;
-      filter: blur(2.5px) grayscale(82%) brightness(.80);
-      pointer-events: none;
-    }
-    .redeem-btn {
-      margin: 1.1em 0 0 0;
-      padding: .72em 2.50em;
-      background: linear-gradient(93deg,#9013fe 30%,#40c9ff 100%);
-      color: #fff;
-      font-size: 1.07em;
-      font-weight: 700;
-      border-radius: 61px;
-      letter-spacing: .01em;
-      border: none;
-      box-shadow: 0 4px 36px #9f3ffe55;
-      cursor: pointer;
-    }
-    .redeem-btn:active {
-      transform: scale(0.965);
-    }
-    .redeem-btn[disabled] {
-      opacity: .53;
-      pointer-events: none;
-      filter: grayscale(1);
-    }
-    @media (max-width:680px) {
-      .container { max-width:98vw; }
-      .cr-card, .product-card { width:min(98vw,127px); }
-      .logo-main { margin-bottom:1vh; }
-      .main-title { font-size:1.55rem; }
-    }
-  </style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>PB Days Rewards & Redemption</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/alphardex/aqua.css@master/dist/aqua.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/styles.css"/>
 </head>
 <body>
-  <div class="layer-blur"></div>
-  <div class="container">
-    <img class="logo-main" src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png" alt="PB Days logo"/>
-    <div class="main-title" data-aos="fade-down">Your PB Days Rewards</div>
-    <div class="pb-cash-banner glow" data-aos="fade-zoom-in" data-aos-duration="1100">
-      You earned PB CASH! <!-- replaced dynamically -->
-    </div>
-    <div class="mini-title" data-aos="fade-up" style="margin-top:1.3em;">My Cards</div>
-    <div class="cr-card-deck" id="col-deck"></div>
-    <div class="mini-title" style="margin-top:2.5em;margin-bottom:1em;" data-aos="fade-down">Rewards</div>
-    <div id="reward-section"></div>
-    <div class="mini-title" style="margin-top:2.5em;" data-aos="fade-left">Leaderboard</div>
-    <div id="leaderboard" class="section-box" data-aos="fade-up" style="margin-bottom:2.5em;"></div>
-    <div style="text-align:center;margin-top:3.1em;margin-bottom:1.1em;">
-      <button class="cr-btn-main" id="back-btn">← Back to Reveal</button>
-    </div>
+<div class="stars">
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div><!-- ...repeat 30 times just like previous... -->
+</div>
+<img src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png" alt="PB Days" class="pb-logo"/>
+
+<div id="slider-bar-row" style="max-width:410px;margin:0 auto 1.2em auto;">
+  <div class="coc-progress-bar" style="position:relative;">
+    <div class="coc-progress-inner" id="coc-progress-inner"></div>
+    <div class="coc-progress-text" id="slider-text"></div>
+    <div id="slider-rocks" style="position:absolute;top:4px;left:7px;right:7px;display:flex;justify-content:space-between;align-items:center;height:14px;z-index:8;pointer-events:none;"></div>
   </div>
-  <audio id="bg-music" src="https://audio.com/syed-maaz-ahmed/audio/mixkit-game-level-completed-2059" loop preload="auto"></audio>
-  <audio id="pb-cash-sfx" src="https://audio.com/syed-maaz-ahmed/audio/mixkit-magic-sweep-game-trophy-257" preload="auto"></audio>
-  <audio id="redeem-sfx" src="https://audio.com/syed-maaz-ahmed/audio/mixkit-magic-sweep-game-trophy-257" preload="auto"></audio>
-  <script>
+</div>
+<div style="text-align:center;">
+  <button class="btn-aqua btn-aqua-large" id="open-gallery" style="margin-top:10px;">View All My Cards</button>
+</div>
+
+<div class="cr-card-deck redeem-card-grid" id="col-deck"></div>
+
+<!-- PB Cash CTA -->
+<div style="text-align:center;margin:0.8em 0 1.2em 0;">
+  <button class="btn-aqua btn-aqua-large" id="show-pb-cash" style="display:none;">Redeem PB CASH</button>
+</div>
+
+<div class="mini-title" data-aos="fade-up" style="margin-top:0.7em;color:#fedc07;text-align:center;font-size:1.08em;">Rewards</div>
+<div id="reward-section"></div>
+<div class="mini-title" style="margin-top:2.2em;" data-aos="fade-left">Leaderboard</div>
+<div id="leaderboard" class="section-box" data-aos="fade-up" style="margin-bottom:3em;"></div>
+
+<!-- Gallery Modal -->
+<div class="modal-bg" id="gallery-modal" style="display:none;">
+  <div class="modal-fg" style="max-width:99vw;text-align:center;padding:2.1em 1em;position:relative;">
+    <button id="gallery-left" class="gallery-btn" style="position:absolute;left:17px;top:50%;transform:translateY(-50%);">←</button>
+    <img id="gallery-card-img" src="" alt="card" class="gallery-card-img" style="width:68vw;max-width:290px;box-shadow:0 0 90px #ccfffc70,0 0 70px #5d33fa;">
+    <button id="gallery-right" class="gallery-btn" style="position:absolute;right:17px;top:50%;transform:translateY(-50%);">→</button>
+    <div id="gallery-card-name" class="gallery-card-name"></div>
+    <button class="btn-aqua btn-aqua-large" id="gallery-close" style="margin-top:1.1em;">Close</button>
+  </div>
+</div>
+
+<!-- PB CASH Modal -->
+<div class="modal-bg" id="pb-cash-modal" style="display:none;">
+  <div class="modal-fg">
+    <div class="pb-cash-text" id="pb-cash-text"></div>
+    <button class="btn-aqua btn-aqua-large" id="pb-cash-claim">Claim PB CASH</button>
+    <button class="btn-aqua btn-aqua-large" style="background:#444;margin-top:.5em;" id="pb-cash-close">Close</button>
+  </div>
+</div>
+
+<audio id="bg-music" src="" loop preload="auto"></audio>
+<audio id="redeem-sfx" src="" preload="auto"></audio>
+<audio id="pb-cash-sfx" src="" preload="auto"></audio>
+
+<script>
   window.ENV = {
     SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
     SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpemZ1ZHh4bXFvaGxsbGlkY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODM2NjYsImV4cCI6MjA3ODc1OTY2Nn0._VzTpjPudZ9kyq-cHKR-0xJP8rix7pgntjL2Acc3hY0"
   };
 </script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js"></script>
-  <script src="js/reward-logic.js"></script>
-  <script src="js/supabase-client.js"></script>
-  <script src="js/app-redeem.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
-  <script>
-    AOS.init({
-      once: true,
-      duration: 1200,
-      easing: 'cubic-bezier(.19,.66,.58,1)'
-    });
-  </script>
+  
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/reward-logic.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/app-redeem.js"></script>
 </body>
 </html>
