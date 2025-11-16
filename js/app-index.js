@@ -50,11 +50,12 @@
   }
 
   function toggleMute() {
+    // This button click also counts as the first interaction
     if (!userInteracted) {
-        // This is the first interaction, so load the audio
         loadAudio();
+        userInteracted = true;
     }
-    userInteracted = true; // First click counts as interaction
+    
     isMuted = !isMuted;
     
     if (isMuted) {
@@ -74,14 +75,38 @@
   
   muteBtn.onclick = toggleMute;
   
-  // Also try to play on any click if not yet interacted
-  document.body.addEventListener('pointerdown', () => {
-    if (!userInteracted) {
-        // Don't auto-play, wait for mute button click
-        // This prevents the "NotAllowedError"
-    }
-  }, { once: true });
+  // FIX: This is the new "first-tap-anywhere" audio unlock
+  function primeAudio() {
+      if (userInteracted) return;
+      userInteracted = true;
+      loadAudio();
+      
+      // Try to play and immediately pause bg music
+      // This "unlocks" the audio context for the browser
+      let playPromise = bgMusic.play();
+      if (playPromise !== undefined) {
+          playPromise.then(_ => {
+              if (isMuted) {
+                bgMusic.pause();
+              }
+          }).catch(error => {
+              // Autoplay was prevented.
+          });
+      }
+  }
+  document.body.addEventListener('pointerdown', primeAudio, { once: true });
 
+
+  // FIX: Pause music when tab is hidden
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (!isMuted) bgMusic.pause();
+    } else {
+      if (!isMuted && userInteracted) {
+        bgMusic.play();
+      }
+    }
+  });
 
   // --- Initialization ---
   initSupabase();
@@ -154,7 +179,6 @@
     } else {
       console.log("Fetching cards for:", userEmail);
       try {
-        // Fetch SKUs from our Netlify function
         let res = await fetch('/.netlify/functions/magento-fetch', {
           method: "POST",
           body: JSON.stringify({ email: userEmail }),
@@ -179,7 +203,6 @@
           throw new Error('No cards associated with the segments in this order.');
         }
 
-        // Insert grant to cards_earned for real users (if not already present)
         for (const card of revealCards) {
           let { data: existing, error } = await supabase.from('cards_earned')
             .select('id')
@@ -211,37 +234,84 @@
         return;
     }
 
-    // 2. Build the 2x2 grid (initially hidden/locked)
+    // 2. Build the 3-column grid
     stage.innerHTML = ''; // Clear stage
     const grid = document.createElement('div');
     grid.className = "reveal-card-grid";
 
     let numCards = revealCards.length;
-    let lockCount = 4 - numCards;
-    
+    // Create 9 slots for a 3x3 grid
     let slots = [];
     for (let i = 0; i < numCards; i++) {
       slots.push({ name: revealCards[i], owned: true });
     }
+    
+    // Fill remaining slots (up to 9) with locked cards
     let otherCards = ALL_CARD_NAMES.filter(c => !revealCards.includes(c));
-    for (let i = 0; i < lockCount; i++) {
-      slots.push({ name: otherCards[i] || ALL_CARD_NAMES[i], owned: false });
+    for (let i = 0; i < (9 - numCards); i++) {
+      slots.push({ name: otherCards[i] || ALL_CARD_NAMES[i % ALL_CARD_NAMES.length], owned: false });
     }
 
     // Add card elements to grid
-    for (let i = 0; i < slots.length; i++) {
+    // This will naturally fill the 3x3 grid
+    // For 7 cards: 1,2,3 / 4,5,6 / 7,L,L
+    // We will hide the 8th and 9th (L,L) if they are locked.
+    // Ah, wait. The user wants the 7th in the middle.
+    // [1] [2] [3]
+    // [4] [5] [6]
+    // [L] [7] [L]
+    // This requires placing the 7th card in the 8th grid slot.
+    
+    stage.innerHTML = ''; // Clear stage again
+    grid.innerHTML = '';
+    
+    let gridSlots = new Array(9).fill(null); // 9-slot array
+    let cardIndex = 0;
+    
+    // Fill first 6 slots
+    for(let i = 0; i < 6; i++) {
+        if(cardIndex < numCards) {
+            gridSlots[i] = { name: revealCards[cardIndex], owned: true };
+            cardIndex++;
+        }
+    }
+    
+    // Handle 7th card - put it in the 8th slot (index 7)
+    if(cardIndex < numCards) {
+        gridSlots[7] = { name: revealCards[cardIndex], owned: true };
+        cardIndex++;
+    }
+    
+    // Fill any remaining cards (this shouldn't happen for 7, but good for < 6)
+    while(cardIndex < numCards) {
+        let nextEmpty = gridSlots.indexOf(null);
+        if(nextEmpty === -1) break;
+        gridSlots[nextEmpty] = { name: revealCards[cardIndex], owned: true };
+        cardIndex++;
+    }
+
+    // Fill all remaining 'null' slots with locked cards
+    for(let i = 0; i < 9; i++) {
+        if(gridSlots[i] === null) {
+            gridSlots[i] = { name: otherCards[i % otherCards.length], owned: false };
+        }
+    }
+
+    // Create image elements from the gridSlots array
+    for (const slot of gridSlots) {
       let img = document.createElement('img');
       img.className = "reveal-card-static";
-      img.src = CARD_IMAGES[slots[i].name] || config.logo;
-      if (slots[i].owned) {
+      img.src = CARD_IMAGES[slot.name] || config.logo;
+      if (slot.owned) {
         img.classList.add('revealed');
-        img.dataset.cardName = slots[i].name; // Tag revealed cards
+        img.dataset.cardName = slot.name; // Tag revealed cards
       } else {
         img.classList.add('locked');
       }
       grid.appendChild(img);
     }
     stage.appendChild(grid);
+
 
     // 3. Start the sequential reveal animation
     await revealOneByOne(revealCards, grid);
@@ -259,42 +329,34 @@
     for (let i = 0; i < cards.length; i++) {
       const cardName = cards[i];
       
-      // 1. Create the big card
       const bigCard = document.createElement('img');
       bigCard.className = "reveal-card-big";
       bigCard.src = CARD_IMAGES[cardName] || "";
       stage.appendChild(bigCard);
 
-      // 2. Animate it in (CSS transition)
-      await delay(50); // wait a tick for paint
+      await delay(50); 
       bigCard.classList.add('is-revealing');
-      playSfx(sfxReveal);
+      playSfx(sfxReveal); // This will work now after first tap
       
-      // 3. Wait for it to be seen
       await delay(1200);
 
-      // 4. Animate it out
       bigCard.classList.add('is-hiding');
       
-      // 5. While it's hiding, "pop" the grid card
-      await delay(250); // Wait for shrink to start
+      await delay(250); 
       const gridCard = grid.querySelector(`.reveal-card-static[data-card-name="${cardName}"]`);
       if (gridCard) {
         gridCard.classList.add('pop-in'); // This class now makes it visible
       }
 
-      // 6. Wait for hide animation to finish
-      await delay(300); // 500ms total hide time
+      await delay(300); 
       bigCard.remove();
       
-      // 7. Pause before next card
       await delay(200);
     }
   }
 
   // --- Navigation ---
   redeemBtn.onclick = () => {
-    // Pass email to redeem page
     window.location.href = `redeem.html?email=${encodeURIComponent(userEmail)}`;
   };
 
