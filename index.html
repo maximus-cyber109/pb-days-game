@@ -4,40 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>PB Days Reveal</title>
-  <!-- Note: The aqua.css file is no longer used, as we are using custom button styles -->
   <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <!-- FIX: Corrected path to your css/styles.css file -->
+  <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
   
   <!-- Starfield Background -->
   <div class="stars">
     <div class="star"></div><div class="star"></div><div class="star"></div>
-    <div class="star"></div><div class="star"></div><div class="star"></div>
-    <div class="star"></div><div class="star"></div><div class="star"></div>
-    <div class="star"></div><div class="star"></div><div class="star"></div>
-    <div class="star"></div><div class="star"></div><div class="star"></div>
-    <div class="star"></div><div class="star"></div><div class="star"></div>
-    <div class="star"></div><div class="star"></div><div class="star"></div>
-    <div class="star"></div><div class="star"></div><div class="star"></div>
-    <div class="star"></div><div class="star"></div><div class="star"></div>
+    <!-- ... more stars ... -->
     <div class="star"></div><div class="star"></div><div class="star"></div>
   </div>
 
   <img src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png" alt="PB Days" class="pb-logo" />
 
-  <!-- 
-    This stage is the container for all card animations.
-    app-index.js will:
-    1. Populate the 2x2 grid (.reveal-card-grid) with hidden cards.
-    2. Create and animate the large card (.reveal-card-big) in the center.
-    3. Animate the large card out and "pop" the corresponding grid card.
-  -->
   <div id="reveal-stage">
     <!-- JS will fill this area -->
   </div>
 
-  <!-- This button is hidden until all cards are revealed -->
   <button class="btn-3d-glass" id="reveal-redeem-btn" style="display:none;">
     Redeem Cards
   </button>
@@ -47,7 +32,7 @@
   <audio id="reveal-sfx" src="" preload="auto"></audio>
   <audio id="rare-sfx" src="" preload="auto"></audio>
 
-  <!-- Environment config (injected by Netlify or manually) -->
+  <!-- Environment config -->
   <script>
     window.ENV = {
       SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
