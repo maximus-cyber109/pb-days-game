@@ -1,7 +1,8 @@
+// app-index.js
+
 const config = window.CR_CONFIG;
 const CARD_IMAGES = config.cards;
 const LOGO_URL = config.logo;
-const viewBtn = document.getElementById('view-collection-btn');
 const sfxReveal = document.getElementById('reveal-sfx');
 const sfxRare = document.getElementById('rare-sfx');
 const bgMusic = document.getElementById('bg-music');
@@ -9,7 +10,7 @@ bgMusic.src = config.sounds.bg;
 sfxReveal.src = config.sounds.reveal;
 sfxRare.src = config.sounds.reveal;
 
-let userEmail;
+let userEmail = "";
 let userIsOverride = false;
 let overrideCards = [];
 
@@ -25,35 +26,32 @@ function getOverrideTier(email) {
   }
   return null;
 }
-
-// --- SPLINE/3D SOUND INTERACTION ---
+function playSfx(sfx) {
+  try { sfx.currentTime=0; sfx.play(); } catch {}
+}
+// Setup interaction unlock for BG music/sfx
 let interacted = false;
-document.body.addEventListener('pointerdown', () => {
-  interacted = true;
-  try { bgMusic.play(); } catch {}
-}, {once:true});
+document.body.addEventListener('pointerdown', ()=>{try{ bgMusic.play(); }catch{};interacted=true;},{once:true});
+// -----
 
-// --- UI + Email Modal ---
-const emailBox = document.getElementById('email-card-box');
-const emailInput = document.getElementById('email-input');
-const form = document.getElementById('email-form');
+initSupabase();
+
 function askEmail() {
-  emailBox.style.display = "flex";
-  emailInput.value = "";
-  emailInput.focus();
-  form.onsubmit = function(e){
+  const box = document.createElement('div');
+  box.className = "modal-bg show";
+  box.innerHTML = `<div class="modal-fg" style="padding:2em 1em;">
+      <div class="pb-cash-text">Enter your email to claim your PB Days cards!</div>
+      <form id="email-form"><input type="email" required placeholder="Your Email" style="font-family:'Bungee Spice',sans-serif;font-size:1.18em;border-radius:14px;padding:.8em 1.5em;border:2px solid #ccd;" id="email-input" /><br><button class="btn-aqua btn-aqua-large" style="margin-top:1.2em;">Begin Card Reveal</button></form>
+    </div>`;
+  document.body.appendChild(box);
+  box.querySelector('form').onsubmit = (e) => {
     e.preventDefault();
-    finishEmail(emailInput.value.trim());
-  };
-}
-function finishEmail(val){
-  userEmail = val.toLowerCase().trim();
-  history.replaceState({}, '', "?email=" + encodeURIComponent(userEmail));
-  emailBox.style.display = "none";
-  startRevealFlow();
+    userEmail = box.querySelector('#email-input').value.trim().toLowerCase();
+    box.remove();
+    startRevealFlow();
+  }
 }
 
-// --- Entry ---
 function emailCheck() {
   const urlParams = new URLSearchParams(window.location.search);
   let email = urlParams.get("email");
@@ -62,62 +60,47 @@ function emailCheck() {
     return false;
   }
   userEmail = email.toLowerCase();
-  emailBox.style.display = "none";
   return true;
 }
-emailCheck();
 
-// --- Main Reveal Flow ---
+if (emailCheck()) setTimeout(startRevealFlow, 80);
+
+// --- MAIN CARD REVEAL LOGIC ---
+
 async function startRevealFlow() {
-  document.getElementById('loading-cards').style.display = "";
-  document.getElementById('cr-card-deck').innerHTML = "";
-  viewBtn.style.display = "none";
+  const stage = document.getElementById('reveal-stage');
+  if (!stage) return;
 
-  initSupabase();
-
-  // --- OVERRIDE/PREVIEW SUPPORT ---
-  let overrideInfo = getOverrideTier(userEmail);
-  userIsOverride = !!overrideInfo;
+  // 1. Which cards to reveal?
+  let override = getOverrideTier(userEmail);
+  userIsOverride = !!override;
   let cardNames = Object.keys(config.cards);
-
   let revealCards = [];
-  if (userIsOverride && overrideInfo) {
-    // Fake override: just pick N unique cards
-    overrideCards = cardNames.slice(0, overrideInfo.numCards);
+  if (userIsOverride && override) {
+    overrideCards = cardNames.slice(0, override.numCards);
     revealCards = overrideCards;
-    // Skip DB writes in override mode
   } else {
-    // Real user logic:
-    // 1. Fetch this user's last order, SKUs, and get card reward mapping for segments
+    // Fetch SKUs and segments for given email (call your own lambda/Netlify function, returns {skus:[], prices:[], segments:[]} )
     let res = await fetch('/.netlify/functions/magento-fetch', {
       method: "POST",
       body: JSON.stringify({ email: userEmail }),
       headers: { 'Content-Type': 'application/json' }
     });
     let data = await res.json();
-    if (!data.success) {
-      document.getElementById('loading-cards').innerHTML = `<span style="color:#c82b11;">Error: ${data.error}</span>`;
+    let skus = data.skus || [];
+    let segs = data.segment_codes || [];
+    if (!skus.length || !segs.length) {
+      stage.innerHTML = `<div style="margin-top:100px;font-size:1.09em;color:#eee;text-align:center;">Could not find eligible cards for this order/email.</div>`;
       return;
     }
-    let order = data.order;
-    let skus = data.skus;
-    let { data: prodList = [] } = await supabase
-      .from('products')
-      .select('p_code, segment_code, product_price')
-      .in('p_code', skus);
-
-    let segMap = await getSegmentCardMapping();
-    let uniqueCards = {};
-    prodList.forEach(p => {
-      const segmentName = segMap[p.segment_code] || cardNames.find(c => c.toLowerCase().includes(p.segment_code.toLowerCase()));
-      if (segmentName) uniqueCards[segmentName] = true;
-    });
-    revealCards = Object.keys(uniqueCards);
-
-    // After reveal, store DB (only if not already there)
+    // Map segments to card names via segment_cards table
+    let { data: segCards = [] } = await supabase.from('segment_cards').select('segment_code,card_name');
+    let segMap = {};
+    segCards.forEach(s=>segMap[s.segment_code]=s.card_name);
+    revealCards = Array.from(new Set(segs.map(s=>segMap[s] || cardNames.find(c=>c.toLowerCase().includes(s.toLowerCase()))))).filter(Boolean);
+    // Insert grant to cards_earned for real users (if not already present)
     for(const card of revealCards){
-      let { data: existing } = await supabase.from('cards_earned')
-        .select('id').eq('customer_email', userEmail).eq('card_name', card);
+      let { data: existing } = await supabase.from('cards_earned').select('id').eq('customer_email', userEmail).eq('card_name', card);
       if(!existing.length){
         await supabase.from('cards_earned').insert({
           customer_email: userEmail,
@@ -127,42 +110,60 @@ async function startRevealFlow() {
       }
     }
   }
+  // 2. Reveal animation: one card at center, animate back to 2x2 slots
+  let gridMap = [
+    {x: '10%', y: '12%'}, {x: '60%', y: '12%'}, {x: '10%', y: '62%'}, {x: '60%', y: '62%'}
+  ];
+  let numCards = revealCards.length;
+  let lockCount = 4 - numCards; // always build a 2x2, fill the rest as locked
+  stage.innerHTML = '';
+  let grid = document.createElement('div'); grid.className="reveal-card-grid";
+  // Fill filled+locked
+  let slots = [];
+  for(let i=0;i<revealCards.length;i++) slots.push({name: revealCards[i], owned: true});
+  for(let i=0;i<lockCount;i++) slots.push({name:'', owned:false});
+  for(let i=0;i<slots.length;i++) {
+    let img = document.createElement('img');
+    img.className = "reveal-card-static";
+    img.src = slots[i].owned ? CARD_IMAGES[slots[i].name] : config.fallbackCardImg || "";
+    if (slots[i].owned) img.classList.add('revealed');
+    else img.classList.add('locked');
+    img.style.gridArea = "auto";
+    grid.appendChild(img);
+  }
+  stage.appendChild(grid);
 
-  // --- Reveal Animation ---
-  document.getElementById('loading-cards').style.display = "none";
-  const deck = document.getElementById('cr-card-deck');
-  deck.innerHTML = "";
-  let i = 0;
-  function revealNext() {
-    if (i >= revealCards.length) {
-      setTimeout(() => { viewBtn.style.display = "block"; }, 700);
+  // Now animate each card in:
+  async function revealOne(i) {
+    if (i>=numCards) {
+      document.getElementById('reveal-redeem-btn').style.display = "block";
       return;
     }
     let cardName = revealCards[i];
-    let div = document.createElement('div');
-    div.className = "cr-card";
-    div.style.animationDelay = `${i * 0.32 + 0.12}s`;
-    let img = document.createElement('img');
-    img.className = "cr-image"; img.alt = cardName;
-    img.src = CARD_IMAGES[cardName] || "";
-    div.appendChild(img);
-    let badge = document.createElement('span');
-    badge.className = "cr-card-count";
-    badge.textContent = "✓";
-    div.appendChild(badge);
-
-    deck.appendChild(div);
-    if (interacted) { try { sfxReveal.currentTime=0;sfxReveal.play(); } catch {} }
-
-    i++; setTimeout(revealNext, 1000);
+    let big = document.createElement('img');
+    big.className = "reveal-card-big";
+    big.style.opacity = '0';
+    big.src = CARD_IMAGES[cardName] || "";
+    stage.appendChild(big);
+    setTimeout(()=>{big.style.opacity='1';},160);
+    playSfx(sfxReveal);
+    setTimeout(()=>{
+      big.style.opacity='0';
+      setTimeout(()=>{
+        big.remove();
+        // animate grid cell glow
+        let revealImgs = grid.querySelectorAll('.revealed');
+        if(revealImgs[i]) {
+          revealImgs[i].style.boxShadow="0 0 65px #cfa,0 0 27px #00fe";
+          setTimeout(()=>{revealImgs[i].style.boxShadow="";},390);
+        }
+        revealOne(i+1);
+      },420);
+    },1000);
   }
-  revealNext();
+  revealOne(0);
 }
 
-// --- View Collection Button ---
-viewBtn.onclick = () => {
+// Redeem button
+document.getElementById('reveal-redeem-btn').onclick = () =>
   window.location.href = "redeem.html?email=" + encodeURIComponent(userEmail);
-};
-
-// Auto-start if landing from URL param
-if (userEmail) setTimeout(startRevealFlow, 60);
