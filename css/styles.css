@@ -1,96 +1,164 @@
-/* SpeedEndo Product Card PB Cash/Redemption Visuals */
-.pb-cash-banner {
-  margin: 2em auto .7em auto;
-  background: linear-gradient(90deg,#a259ff 10%, #40c9ff 94%);
+body {
+  background: #18112a;
   color: #fff;
-  border-radius: 27px;
-  font-size: 1.22rem;
-  font-weight: 600;
-  text-align: center;
-  max-width: 390px;
-  box-shadow: 0 2px 30px #9b3ffc4c, 0 1px 7px #490ab988;
-  padding: 1.05em 2.2em;
-  letter-spacing: 0.03em;
-  border: 0;
+  font-family: "Bungee Spice", sans-serif;
+  min-height: 100vh;
+  margin: 0;
+}
+.bungee-spice-regular {
+  font-family: "Bungee Spice", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+.stars {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.star {
+  position: absolute; width: 3px; height: 3px;
+  background: #fff8; border-radius: 50%;
+  box-shadow: 0 0 8px #fff, 0 0 4px #58e0ff88;
+  animation: starTwinkle 2.8s linear infinite;
+}
+@keyframes starTwinkle {
+  0%,100% { opacity: 0.55;}
+  47% { opacity: 1;}
+}
+.pb-logo {
+  display: block;
+  margin: 1.6em auto 0.4em auto;
+  max-width: 222px;
+  width: 60vw;
+}
+.floating-redeem-btn {
+  position: fixed; bottom: 34px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 99;
+  background: linear-gradient(145deg,#fefefe 50%,#8e8ef3 100%);
+  color: #222;
+  box-shadow: 0 8px 38px #993affa5;
+  min-width: 180px; min-height: 62px;
+  font-size: 1.22em;
+  border-radius: 100px;
+  font-family: "Bungee Spice", sans-serif;
+  cursor: pointer;
+  border: none;
+}
+/* Card reveal + grid */
+#reveal-stage, #redeem-stage {
+  margin: 0 auto; width: 94vw; max-width: 400px;
+  height: 80vw; max-height: 75vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
   position: relative;
+}
+.reveal-card-big, .gallery-card-big {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%) scale(1.13);
+  width: 77vw; max-width:330px;
+  transition: all .62s cubic-bezier(.1,.93,.7,1.05);
+  z-index: 22;
+  filter: drop-shadow(0 0 60px #c6a6ff80) drop-shadow(0 0 40px #a264e7ee);
+  border-radius: 17px;
+  background: radial-gradient(ellipse at 50% 50%,#9013fe30 30%,#18112a00 100%);
+}
+.reveal-card-grid, .redeem-card-grid {
+  width: 98%; height: 98%; min-height: 252px;
+  display: grid;
+  grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+  gap: 18px 14px;
+  justify-content: center; align-content: center;
+}
+.reveal-card-static,
+.gallery-card-img {
+  width: 110px; height: 150px; object-fit:contain;
+  border-radius: 13px; filter: drop-shadow(0 0 20px #fff8);
+  background: #2c2547;
+  transition: box-shadow .18s, filter .18s;
+}
+.reveal-card-static.locked,
+.gallery-card-img.locked {
+  filter: grayscale(1) blur(2.4px) brightness(0.67);
+  opacity: 0.67;
+  border: none;
+}
+.reveal-card-static.revealed,
+.gallery-card-img.revealed {
+  filter: drop-shadow(0 0 44px #8d8cff) drop-shadow(0 0 13px #fedc07);
+  border: 2.5px solid #d7aeff;
+}
+/* Modal popups */
+.modal-bg {
+  position: fixed; inset: 0; z-index: 110;
+  background: rgba(18,12,45,0.95);
+  display: none; align-items: center; justify-content: center;
+}
+.modal-fg {
+  background: rgba(36,22,79,.96);
+  box-shadow: 0 3px 44px #a64eef77;
+  padding: 2.4em 1.2em 2.3em;
+  border-radius: 1.32em;
+  text-align: center;
+  min-width: 234px;
+}
+.pb-cash-text, .gallery-card-name {
+  font-size: 1.22rem;
+  color: #fee477;
+  margin: 1.2em 0;
+}
+.gallery-btn {
+  background: linear-gradient(95deg,#fedc07,#7ee3ff);
+  color: #2e2244;margin:0 11px;padding:.88em 1.7em;border:none;border-radius:18px;cursor:pointer;
+  font-size:1.13em;font-family:"Bungee Spice",sans-serif;
+}
+.btn-aqua-large {
+  font-size: 1.14rem;
+  font-family: "Bungee Spice", sans-serif;
+}
+.coc-progress-bar {
+  background: #383636;
+  border-radius: 17px;
+  height: 22px;
+  width: 84vw;
+  max-width: 320px;
+  margin: 1.9em auto 0.6em auto;
+  position: relative;
+  box-shadow: 0 0 20px #4446;
+}
+.coc-progress-inner {
+  background: linear-gradient(90deg,#fedc07 60%,#24ecff 100%);
+  height: 98.5%; border-radius: 17px;
+  box-shadow: 0 0 9px #eeff9466,0 2px 12px #5df7;
+  position: absolute; left: 0; top: 0;
+  transition: width .43s cubic-bezier(.43,.87,.37,1.19);
+}
+.coc-progress-rock {
+  display: inline-block;
+  width: 25px; height: 19px;
+  background: linear-gradient(180deg,#aea581 57%,#908675);
+  border-radius: 6px;
+  box-shadow: 0 1px 4px #1a1712;
+  margin-right: 3px;
+  filter: grayscale(0.29) brightness(0.84);
+}
+.coc-progress-rock.earned {
+  background: linear-gradient(90deg,#fedc07 60%,#ffec82 100%);
+  filter: none; box-shadow:0 0 10px #fff17a88,0 0 7px #f8ffb7a8;
+}
+.coc-progress-text {
+  font-family: "Bungee Spice", sans-serif;
+  color: #fee477;
+  font-weight: 800;
+  font-size: 1.23em;
+  text-shadow: 0 2px 9px #432;
+  position: absolute;
+  left: 50%; top: 50%; transform: translate(-50%,-50%);
   z-index: 3;
 }
-.pb-cash-highlight {
-  color: #ffeb3b;
-  text-shadow: 0 2px 12px #ffd700, 0 1px 6px #fff9;
-  font-size: 1.32em; font-weight: 900;
+@media (max-width:650px) {
+  .reveal-card-big { width:80vw; }
+  .reveal-card-static, .gallery-card-img { width:92px; height:120px;}
+  .coc-progress-bar { width:95vw;max-width:360px;}
 }
-
-.product-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2.3em 4vw;
-  justify-content: center;
-  margin: 1em 0 3em 0;
-}
-.product-card {
-  background: linear-gradient(120deg, #22203dac 78%, #a259ff63 100%);
-  border-radius: 2.1em;
-  padding: 1.1em .7em 2.2em .7em;
-  box-shadow: 0 10px 38px 0 #9013fe76, 
-              0 2px 18px #40c9ffaa;
-  position:relative;
-  max-width: 224px;
-  width: min(92vw, 210px);
-  min-height: 300px;
-  display:flex;flex-direction:column;align-items:center;z-index:3;
-  border: 0.8px solid #6121ee;
-  animation: fadeZoomIn .9s cubic-bezier(.19,.68,.52,1.18) backwards;
-}
-@keyframes fadeZoomIn {
-  from {
-    opacity: 0;
-    transform: scale(.7) translateY(80px) rotateY(-5deg);
-    filter: blur(14px) brightness(1.14);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-    filter: none;
-  }
-}
-.product-img {
-  width: 94%;
-  margin-top: .2em;
-  margin-bottom: 1.4em;
-  border-radius:1.4em;
-  background:linear-gradient(98deg,#3d30a5 52%,#a259ff80 100%);
-  box-shadow:0 6px 42px #9013fe83;
-  aspect-ratio: 1/.73;
-  object-fit:contain;
-  z-index:2;
-}
-.product-name {
-  font-size: 1.12rem;
-  color: #fff;
-  font-weight: 600;
-  text-align:center;
-  margin-bottom: 1.2em;
-  letter-spacing:0.02em;
-  text-shadow:0 2px 10px #9013fe5a,0 1px 3px #111d;
-}
-.product-locked {
-  opacity:0.23;filter:blur(2px) grayscale(83%) brightness(.85);
-  pointer-events:none;
-}
-.redeem-btn {
-  margin: 1.3em 0 0 0;
-  padding: .75em 2.8em;
-  background: linear-gradient(93deg,#9013fe 30%,#40c9ff 100%);
-  color: #fff;
-  font-size: 1.08em;
-  font-weight: 600;
-  border-radius: 61px;
-  letter-spacing: .02em;
-  border: none;
-  box-shadow:0 4px 30px #9f3ffe48, 0 1px 6px #40c9ffa0;
-  cursor:pointer;
-  transition:background .18s;
-}
-.redeem-btn:active { transform:scale(0.96);}
-.redeem-btn[disabled] {opacity:.5;pointer-events:none;filter:grayscale(1);}
