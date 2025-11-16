@@ -1,47 +1,64 @@
 const config = window.CR_CONFIG;
 const CARD_IMAGES = config.cards;
-const emailBox = document.getElementById('email-card-box');
-const emailInput = document.getElementById('email-input');
-const form = document.getElementById('email-form');
-const deckElem = document.getElementById('cr-card-deck');
-const loadingDiv = document.getElementById('loading-cards');
+const LOGO_URL = config.logo;
+const viewBtn = document.getElementById('view-collection-btn');
 const sfxReveal = document.getElementById('reveal-sfx');
 const sfxRare = document.getElementById('rare-sfx');
 const bgMusic = document.getElementById('bg-music');
-const logoImg = document.getElementById('logo-main');
-let userEmail;
-
-// Set logo/sounds from config
-logoImg.src = config.logo;
 bgMusic.src = config.sounds.bg;
 sfxReveal.src = config.sounds.reveal;
-sfxRare.src = config.sounds.rare;
+sfxRare.src = config.sounds.reveal;
 
-// --- Only allow music/SFX after any user gesture ---
-let interactionHappened = false;
+let userEmail;
+let userIsOverride = false;
+let overrideCards = [];
+
+function getOverrideTier(email) {
+  if (!email) return null;
+  let match = email.match(/-ovrmaaz(\d(?:-\d)?)/);
+  if (match) {
+    const t = match[1];
+    if (t === "1") return { tier: "1", numCards: 1 };
+    if (t === "2-4") return { tier: "2-4", numCards: 3 };
+    if (t === "5-6") return { tier: "5-6", numCards: 6 };
+    if (t === "7") return { tier: "7", numCards: 7 };
+  }
+  return null;
+}
+
+// --- SPLINE/3D SOUND INTERACTION ---
+let interacted = false;
 document.body.addEventListener('pointerdown', () => {
-  interactionHappened = true;
+  interacted = true;
   try { bgMusic.play(); } catch {}
 }, {once:true});
 
-function finishEmail(email) {
-  userEmail = email.toLowerCase().trim();
+// --- UI + Email Modal ---
+const emailBox = document.getElementById('email-card-box');
+const emailInput = document.getElementById('email-input');
+const form = document.getElementById('email-form');
+function askEmail() {
+  emailBox.style.display = "flex";
+  emailInput.value = "";
+  emailInput.focus();
+  form.onsubmit = function(e){
+    e.preventDefault();
+    finishEmail(emailInput.value.trim());
+  };
+}
+function finishEmail(val){
+  userEmail = val.toLowerCase().trim();
   history.replaceState({}, '', "?email=" + encodeURIComponent(userEmail));
-  emailBox.style.display = 'none';
+  emailBox.style.display = "none";
   startRevealFlow();
 }
 
+// --- Entry ---
 function emailCheck() {
   const urlParams = new URLSearchParams(window.location.search);
   let email = urlParams.get("email");
   if (!email) {
-    emailBox.style.display = "flex";
-    emailInput.value = "";
-    emailInput.focus();
-    form.onsubmit = function (e) {
-      e.preventDefault();
-      finishEmail(emailInput.value);
-    };
+    askEmail();
     return false;
   }
   userEmail = email.toLowerCase();
@@ -50,126 +67,102 @@ function emailCheck() {
 }
 emailCheck();
 
-/**
- * Returns the segment-code to card-name mapping from Supabase
- * Assumes the global 'supabase' client is initialized!
- * Example: { "HD": "LensWarden",  "IC": "Device-Keeper", ...}
- */
-async function getSegmentCardMapping() {
-  if (!window.supabase) return {};
-  const { data, error } = await supabase
-    .from('segment_cards')
-    .select('segment_code, card_name');
-  if (error) {
-    console.error('getSegmentCardMapping error:', error);
-    return {};
-  }
-  const map = {};
-  data.forEach(row => map[row.segment_code] = row.card_name);
-  return map;
-}
-
+// --- Main Reveal Flow ---
 async function startRevealFlow() {
-  loadingDiv.style.display = "";
-  deckElem.innerHTML = "";
+  document.getElementById('loading-cards').style.display = "";
+  document.getElementById('cr-card-deck').innerHTML = "";
+  viewBtn.style.display = "none";
 
   initSupabase();
-  if (!window.supabase) {
-    loadingDiv.innerHTML = "<span style='color:#95240e;'>Could not connect.<br/>Try again.</span>";
-    return;
-  }
 
-  let order, skus;
-  try {
+  // --- OVERRIDE/PREVIEW SUPPORT ---
+  let overrideInfo = getOverrideTier(userEmail);
+  userIsOverride = !!overrideInfo;
+  let cardNames = Object.keys(config.cards);
+
+  let revealCards = [];
+  if (userIsOverride && overrideInfo) {
+    // Fake override: just pick N unique cards
+    overrideCards = cardNames.slice(0, overrideInfo.numCards);
+    revealCards = overrideCards;
+    // Skip DB writes in override mode
+  } else {
+    // Real user logic:
+    // 1. Fetch this user's last order, SKUs, and get card reward mapping for segments
     let res = await fetch('/.netlify/functions/magento-fetch', {
       method: "POST",
       body: JSON.stringify({ email: userEmail }),
       headers: { 'Content-Type': 'application/json' }
     });
     let data = await res.json();
-    if (!data.success) throw new Error(data.error || "No order returned from backend");
-    if (!data.order || !data.order.id) throw new Error("Order object missing or invalid");
-    if (!Array.isArray(data.skus) || data.skus.length === 0) throw new Error("No SKUs found in order");
-    order = data.order;
-    skus = data.skus;
-    console.log("Order ID:", order.id, "SKUs:", skus);
-  } catch (err) {
-    console.error("Order fetch error:", err);
-    loadingDiv.innerHTML = `<span style="color:#c82b11;">Error: ${err.message}</span>`;
-    return;
-  }
-
-  // --- 3. Lookup mapped cards for SKUs
-  let { data: prodList=[] } = await supabase
-    .from('products')
-    .select('p_code, segment_code, product_price')
-    .in('p_code', skus);
-  if (!prodList.length) {
-    loadingDiv.innerHTML = "No eligible cards.";
-    return;
-  }
-  let segMap = await getSegmentCardMapping();
-  let cards = prodList.map(p => {
-    const price = parseFloat(p.product_price);
-    const segmentCode = p.segment_code;
-    const sku = p.p_code;
-    let cardName, isRare = false;
-    if (price === 0) return null;
-    if (price > 0 && price < 1000) return null; // not a card
-    if (price >= 1000) {
-      if (segmentCode === 'CA') {
-        cardName = 'Tooth-Tyrant';
-        isRare = false;
-      } else if (segmentCode === 'HD') {
-        cardName = price > 10000 ? 'Device-Keeper' : 'Tooth-Tyrant';
-        isRare = price > 10000;
-      } else if (segmentCode === 'IC') {
-        cardName = segMap[segmentCode] || 'LensWarden';
-        isRare = true;
-      } else {
-        cardName = segMap[segmentCode] || 'File-Forger';
-        isRare = price > 10000;
-      }
-      return { card_name: cardName, is_rare: isRare, quantity: 1 };
-    }
-    return null;
-  }).filter(Boolean);
-
-  // --- 4. Tally for duplicates
-  const cardTally = {};
-  cards.forEach(c => {
-    if (!cardTally[c.card_name]) cardTally[c.card_name] = {...c, quantity: 0};
-    cardTally[c.card_name].quantity += 1;
-    cardTally[c.card_name].is_rare = cardTally[c.card_name].is_rare || c.is_rare;
-  });
-
-  // --- 5. Animate reveal, as per order
-  loadingDiv.style.display = "none";
-  deckElem.innerHTML = "";
-  let arr = Object.values(cardTally), i = 0;
-  (function reveal() {
-    if (i >= arr.length) {
-      document.getElementById('view-collection-btn').style.display = "block";
+    if (!data.success) {
+      document.getElementById('loading-cards').innerHTML = `<span style="color:#c82b11;">Error: ${data.error}</span>`;
       return;
     }
-    let { card_name, is_rare, quantity } = arr[i];
-    let div = document.createElement('div');
-    div.className = "cr-card" + (is_rare ? " rare" : "");
-    let img = document.createElement('img');
-    img.className = "cr-image"; img.alt = card_name; img.src = CARD_IMAGES[card_name] || "";
-    div.appendChild(img);
-    if (quantity > 1) {
-      let badge = document.createElement('span');
-      badge.className = 'cr-card-count';
-      badge.textContent = "x" + quantity; div.appendChild(badge);
+    let order = data.order;
+    let skus = data.skus;
+    let { data: prodList = [] } = await supabase
+      .from('products')
+      .select('p_code, segment_code, product_price')
+      .in('p_code', skus);
+
+    let segMap = await getSegmentCardMapping();
+    let uniqueCards = {};
+    prodList.forEach(p => {
+      const segmentName = segMap[p.segment_code] || cardNames.find(c => c.toLowerCase().includes(p.segment_code.toLowerCase()));
+      if (segmentName) uniqueCards[segmentName] = true;
+    });
+    revealCards = Object.keys(uniqueCards);
+
+    // After reveal, store DB (only if not already there)
+    for(const card of revealCards){
+      let { data: existing } = await supabase.from('cards_earned')
+        .select('id').eq('customer_email', userEmail).eq('card_name', card);
+      if(!existing.length){
+        await supabase.from('cards_earned').insert({
+          customer_email: userEmail,
+          card_name: card,
+          earned_at: new Date().toISOString()
+        });
+      }
     }
-    let sfx = is_rare ? sfxRare : sfxReveal;
-    if (interactionHappened && sfx) { try { sfx.currentTime=0; sfx.play(); } catch {} }
-    deckElem.appendChild(div);
-    i++; setTimeout(reveal, 850);
-  })();
-  document.getElementById('view-collection-btn').onclick = () =>
-    window.location.href = "redeem.html?email=" + encodeURIComponent(userEmail);
+  }
+
+  // --- Reveal Animation ---
+  document.getElementById('loading-cards').style.display = "none";
+  const deck = document.getElementById('cr-card-deck');
+  deck.innerHTML = "";
+  let i = 0;
+  function revealNext() {
+    if (i >= revealCards.length) {
+      setTimeout(() => { viewBtn.style.display = "block"; }, 700);
+      return;
+    }
+    let cardName = revealCards[i];
+    let div = document.createElement('div');
+    div.className = "cr-card";
+    div.style.animationDelay = `${i * 0.32 + 0.12}s`;
+    let img = document.createElement('img');
+    img.className = "cr-image"; img.alt = cardName;
+    img.src = CARD_IMAGES[cardName] || "";
+    div.appendChild(img);
+    let badge = document.createElement('span');
+    badge.className = "cr-card-count";
+    badge.textContent = "✓";
+    div.appendChild(badge);
+
+    deck.appendChild(div);
+    if (interacted) { try { sfxReveal.currentTime=0;sfxReveal.play(); } catch {} }
+
+    i++; setTimeout(revealNext, 1000);
+  }
+  revealNext();
 }
 
-if (userEmail) setTimeout(startRevealFlow, 90);
+// --- View Collection Button ---
+viewBtn.onclick = () => {
+  window.location.href = "redeem.html?email=" + encodeURIComponent(userEmail);
+};
+
+// Auto-start if landing from URL param
+if (userEmail) setTimeout(startRevealFlow, 60);
