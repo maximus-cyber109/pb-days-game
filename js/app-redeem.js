@@ -19,94 +19,8 @@
   let userCards = []; // Array of card names user owns
   let mainTier = "1";
 
-  // --- Audio ---
-  const sfxRedeem = document.getElementById('redeem-sfx');
-  const sfxPbCash = document.getElementById('pb-cash-sfx');
-  const bgMusic = document.getElementById('bg-music');
-  const muteBtn = document.getElementById('mute-btn');
-  const iconMuted = document.getElementById('icon-muted');
-  const iconUnmuted = document.getElementById('icon-unmuted');
-
-  let isMuted = true; // Start muted until user interacts
-  let userInteracted = false;
-
-  function loadAudio() {
-    try {
-      // FIX: Load audio from the config
-      bgMusic.src = config.sounds.bg;
-      sfxRedeem.src = config.sounds.redeem;
-      sfxPbCash.src = config.sounds.reveal; // Using reveal sound for cash
-    } catch(e) { console.warn("Could not set audio sources", e); }
-  }
+  // --- Audio (REMOVED) ---
   
-  function playSfx(sfx) {
-    if (isMuted || !userInteracted) return;
-    try {
-      sfx.currentTime = 0;
-      sfx.play();
-    } catch (e) {
-      // console.warn("Audio play failed", e);
-    }
-  }
-
-  function toggleMute() {
-    // This button click also counts as the first interaction
-    if (!userInteracted) {
-        loadAudio();
-        userInteracted = true;
-    }
-    
-    isMuted = !isMuted;
-    
-    if (isMuted) {
-      bgMusic.pause();
-      iconMuted.style.display = 'block';
-      iconUnmuted.style.display = 'none';
-    } else {
-      try {
-        bgMusic.play();
-      } catch(e) {
-        console.warn("BG music play failed.", e);
-      }
-      iconMuted.style.display = 'none';
-      iconUnmuted.style.display = 'block';
-    }
-  }
-  
-  muteBtn.onclick = toggleMute;
-
-  // FIX: This is the new "first-tap-anywhere" audio unlock
-  function primeAudio() {
-      if (userInteracted) return;
-      userInteracted = true;
-      loadAudio();
-      
-      let playPromise = bgMusic.play();
-      if (playPromise !== undefined) {
-          playPromise.then(_ => {
-              if (isMuted) {
-                bgMusic.pause();
-              }
-          }).catch(error => {
-              // Autoplay was prevented.
-          });
-      }
-  }
-  document.body.addEventListener('pointerdown', primeAudio, { once: true });
-
-
-  // FIX: Pause music when tab is hidden
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      if (!isMuted) bgMusic.pause();
-    } else {
-      if (!isMuted && userInteracted) {
-        bgMusic.play();
-      }
-    }
-  });
-
-
   // --- Utility ---
   function getOverrideTier(email) {
     let match = (email || '').match(/-ovrmaaz(\d(?:-\d)?)/);
@@ -260,7 +174,7 @@
   // --- Event Handlers & Logic ---
 
   async function handleRedeemClick(reward, button) {
-    playSfx(sfxRedeem); // This will work now
+    // playSfx(sfxRedeem); // REMOVED
     button.textContent = "Checking...";
     button.disabled = true;
 
@@ -313,8 +227,7 @@
     const cardNameEl = document.getElementById('gallery-card-name');
     const openBtn = document.getElementById('open-gallery');
     
-    // FIX: This check was the problem. The audio error stopped the script
-    // before this point. Now that audio is fixed, this will run.
+    // This will now work because the audio error is gone.
     if (!modal || !cardImg || !cardNameEl || !openBtn) {
         console.error("Gallery modal elements missing!");
         return;
@@ -411,7 +324,7 @@
     }
     
     claimBtn.onclick = async function() {
-      playSfx(sfxPbCash);
+      // playSfx(sfxPbCash); // REMOVED
       claimBtn.disabled = true;
       claimBtn.textContent = "Claiming...";
       
