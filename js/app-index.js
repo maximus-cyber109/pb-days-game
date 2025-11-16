@@ -11,16 +11,22 @@
 
   const CARD_IMAGES = config.cards;
   const sfxReveal = document.getElementById('reveal-sfx');
-  const sfxRare = document.getElementById('rare-sfx'); // Note: Using same as reveal, as per original
+  const sfxRare = document.getElementById('rare-sfx');
   const bgMusic = document.getElementById('bg-music');
   const stage = document.getElementById('reveal-stage');
   const redeemBtn = document.getElementById('reveal-redeem-btn');
+  const muteBtn = document.getElementById('mute-btn');
+  const iconMuted = document.getElementById('icon-muted');
+  const iconUnmuted = document.getElementById('icon-unmuted');
+
+  let isMuted = true; // Start muted until user interacts
+  let userInteracted = false;
 
   // Sound setup
   try {
     bgMusic.src = config.sounds.bg;
     sfxReveal.src = config.sounds.reveal;
-    sfxRare.src = config.sounds.reveal; // Or config.sounds.rare if you add it
+    sfxRare.src = config.sounds.reveal; 
   } catch (e) {
     console.warn("Could not set audio sources", e);
   }
@@ -32,6 +38,7 @@
 
   // --- Audio Handling ---
   function playSfx(sfx) {
+    if (isMuted || !userInteracted) return;
     try {
       sfx.currentTime = 0;
       sfx.play();
@@ -39,14 +46,36 @@
       // console.warn("Audio play failed", e);
     }
   }
-  // Setup interaction unlock for BG music/sfx
+
+  function toggleMute() {
+    userInteracted = true; // First click counts as interaction
+    isMuted = !isMuted;
+    
+    if (isMuted) {
+      bgMusic.pause();
+      iconMuted.style.display = 'block';
+      iconUnmuted.style.display = 'none';
+    } else {
+      try {
+        bgMusic.play();
+      } catch(e) {}
+      iconMuted.style.display = 'none';
+      iconUnmuted.style.display = 'block';
+    }
+  }
+  
+  muteBtn.onclick = toggleMute;
+  
+  // Also try to play on any click if not yet interacted
   document.body.addEventListener('pointerdown', () => {
-    try {
-      if (bgMusic.paused) bgMusic.play();
-    } catch (e) {
-      // console.warn("BG music play failed", e);
+    if (!userInteracted) {
+        userInteracted = true;
+        if (!isMuted) {
+             try { bgMusic.play(); } catch(e) {}
+        }
     }
   }, { once: true });
+
 
   // --- Initialization ---
   initSupabase();
@@ -137,8 +166,6 @@
 
         console.log("Order SKUs:", data.skus);
         
-        // Use reward-logic function to get cards
-        // This abstracts the DB calls
         revealCards = await window.getCardsFromOrderSkus(data.skus);
         console.log("Cards earned:", revealCards);
 
@@ -148,12 +175,11 @@
 
         // Insert grant to cards_earned for real users (if not already present)
         for (const card of revealCards) {
-          // FIX: Removed the stray underscore `_` from the end of this line
           let { data: existing, error } = await supabase.from('cards_earned')
             .select('id')
             .eq('customer_email', userEmail)
             .eq('card_name', card)
-            .eq('order_id', data.order.increment_id); // Ensure it's for this order
+            .eq('order_id', data.order.increment_id); 
             
           if (error) console.error("Error checking cards_earned:", error);
 
@@ -185,13 +211,12 @@
     grid.className = "reveal-card-grid";
 
     let numCards = revealCards.length;
-    let lockCount = 4 - numCards; // Always build a 2x2 grid
+    let lockCount = 4 - numCards;
     
     let slots = [];
     for (let i = 0; i < numCards; i++) {
       slots.push({ name: revealCards[i], owned: true });
     }
-    // Fill remaining slots with locked cards (use other cards as placeholders)
     let otherCards = ALL_CARD_NAMES.filter(c => !revealCards.includes(c));
     for (let i = 0; i < lockCount; i++) {
       slots.push({ name: otherCards[i] || ALL_CARD_NAMES[i], owned: false });
@@ -201,7 +226,7 @@
     for (let i = 0; i < slots.length; i++) {
       let img = document.createElement('img');
       img.className = "reveal-card-static";
-      img.src = CARD_IMAGES[slots[i].name] || config.logo; // Fallback
+      img.src = CARD_IMAGES[slots[i].name] || config.logo;
       if (slots[i].owned) {
         img.classList.add('revealed');
         img.dataset.cardName = slots[i].name; // Tag revealed cards
@@ -249,7 +274,7 @@
       await delay(250); // Wait for shrink to start
       const gridCard = grid.querySelector(`.reveal-card-static[data-card-name="${cardName}"]`);
       if (gridCard) {
-        gridCard.classList.add('pop-in');
+        gridCard.classList.add('pop-in'); // This class now makes it visible
       }
 
       // 6. Wait for hide animation to finish
