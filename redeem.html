@@ -3,50 +3,74 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>PB DAYS: My Collection</title>
+  <title>PB Days Collection & Redemption</title>
   <link rel="stylesheet" href="css/styles.css"/>
-  <link rel="stylesheet" href="css/uiverse-buttons.css"/>
-  <link href="https://fonts.googleapis.com/css2?family=Bungee:wght@400&family=Merriweather:400,700,400italic&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
   <script src="js/config.js"></script>
+  <style>
+    body { background: #110924; color: #ecebfa; margin:0; font-family: 'Inter', Arial, sans-serif; }
+    .layer-blur {position:fixed;top:0;right:0;width:32vw;height:29vw;min-width:198px;z-index:0;pointer-events:none;filter:blur(60px) brightness(1.12);background:linear-gradient(130deg,#9013fe6c 0%,#40c9ff 101%);opacity:.5;border-radius:51%;}
+    .container { max-width:880px;margin:0 auto;position:relative;z-index:1;padding-bottom:70px;}
+    .main-title {font-size:2.38rem;font-weight:700;text-align:center;letter-spacing:-.7px;margin-top:36px;margin-bottom:.4em;color:#fff;filter:drop-shadow(0 10px 36px #9f3ffe72);}
+    .logo-main {display:block;margin:2.8vh auto 1.2em auto;max-width:198px;width:48vw;filter:drop-shadow(0 5px 34px #9013fe50);}
+    .cr-card-deck { display:flex;flex-wrap:wrap;gap:2.1em 2.5vw;justify-content:center;margin:2.7em 0 1.6em 0; }
+    .cr-card { width:min(206px,37vw);aspect-ratio:.71;background:none;display:flex;flex-direction:column;align-items:center;position:relative;filter:drop-shadow(0 0 46px #d1aefffa) drop-shadow(0 2px 13px #5eabbfaa);z-index:2;border-radius:28px; transition:filter .38s cubic-bezier(.71,0,1,.77), transform .18s;animation:fadeZoomIn .85s cubic-bezier(.24,1.11,.58,1.21) backwards;}
+    @keyframes fadeZoomIn {from{opacity:0;transform:scale(0.73) translateY(90px);filter:blur(17px) brightness(1.1);} to{opacity:1;filter:none;transform:none;}}
+    .cr-card .cr-image { width:100%;object-fit:contain;margin:0 auto;border-radius:22px;background:none;}
+    .cr-card.locked { opacity:.22; filter: blur(2.2px) grayscale(92%) brightness(.71); pointer-events:none;}
+    .cr-card .cr-card-count {position:absolute;bottom:-12px;right:16px;background:linear-gradient(90deg,#fff,#dae9ff 80%);box-shadow:0 1px 4px #a259ff87;color:#9013fe;font-weight:700;border-radius:16px;font-size:1.08em;padding:.28em .91em;border:2px solid #c37bff;z-index:10;}
+    .pb-cash-banner {margin:2em auto .7em auto;background:linear-gradient(90deg,#a259ff 10%, #40c9ff 94%);color:#fff;border-radius:27px;font-size:1.22rem;font-weight:600;text-align:center;max-width:390px;box-shadow:0 2px 30px #9b3ffc4c; padding:1.05em 2.2em; letter-spacing:0.04em;}
+    .pb-cash-highlight { color:#ffeb3b;text-shadow:0 2px 12px #ffd700, 0 1px 6px #fff9;font-size:1.32em; font-weight:900;}
+    .product-grid { display: flex; flex-wrap: wrap; gap: 2.2em 4vw; justify-content: center;margin:1em 0 3em 0;}
+    .product-card { background:linear-gradient(120deg,#22203dd1 77%,#a259ff99 100%); border-radius:2.1em; padding:1.1em .8em 2.1em .8em; box-shadow:0 10px 42px 0 #9013fe49;position:relative;max-width:230px;width:min(97vw,220px);min-height:295px;display:flex;flex-direction:column;align-items:center;z-index:3; border: 0.8px solid #6121ee; animation:fadeZoomIn .9s cubic-bezier(.19,.68,.52,1.18) backwards;}
+    .product-img { width:98%;margin-top:.45em;margin-bottom:1.35em;border-radius:1.4em;background:linear-gradient(95deg,#422e6a 51%,#993fff70 99%); box-shadow:0 8px 42px #9013fe73; aspect-ratio:1/.74; object-fit:contain; z-index:2;}
+    .product-name { font-size:1.11rem;color:#fff;font-weight:600;text-align:center;margin-bottom:1.39em;letter-spacing:0.01em;text-shadow:0 2px 12px #9013fe4a;}
+    .product-locked { opacity:0.22;filter:blur(2.5px) grayscale(80%) brightness(.80);pointer-events:none;}
+    .redeem-btn { margin:1.3em 0 0 0;padding:.79em 2.8em;background:linear-gradient(93deg,#9013fe 30%,#40c9ff 100%);color:#fff;font-size:1.08em;font-weight:700;border-radius:61px;letter-spacing:.01em;border:none;box-shadow:0 4px 33px #9f3ffe44;cursor:pointer;transition:background .18s;}
+    .redeem-btn:active { transform:scale(0.96);}
+    .redeem-btn[disabled] {opacity:.55;pointer-events:none;filter:grayscale(1);}
+    .glow { box-shadow:0 0 70px 22px #b250ff99, 0 0 54px 10px #40c9ff44;}
+    .mini-title {color:#b388ff;text-align:center;font-weight:600;font-size:1.33rem;letter-spacing:.02em;margin-top:30px;}
+    .section-box {background:#191537e6;border-radius:23px;box-shadow:0 1px 20px #a259ff2c;padding:1.6em 1.1em;margin-bottom:2.1em;}
+    .animate-fade {animation:fadeZoomIn .8s cubic-bezier(.7,0,.7,1.2) backwards;}
+    @media (max-width:680px) {
+      .container {max-width:97vw;}
+      .cr-card, .product-card {width:min(97vw,140px);}
+      .logo-main {margin-bottom:1.3vh;}
+      .main-title {font-size:1.7rem;}
+    }
+  </style>
 </head>
 <body>
-  <img id="logo-main" class="logo-main" src="" alt="PB Days Logo"/>
+  <div class="layer-blur"></div>
   <div class="container">
-
-    <div class="cr-title">My Collection</div>
-    <div class="serif-intro" id="email-display"></div>
-
-    <!-- All 7 cards grid -->
-    <div class="cr-card-deck" id="col-deck"></div>
-
-    <!-- Redeem CTA -->
-    <div id="redeem-cta" style="text-align:center;margin:1.6em 0 2.1em 0;"></div>
-
-    <!-- Leaderboard -->
-    <div style="margin-top:2.8em;">
-      <h2 style="font-size:1.3em;color:#da2f11;text-align:center;margin-bottom:1.6em;">🏆 Leaderboard</h2>
-      <div id="leaderboard" style="max-width:500px;margin:0 auto;"></div>
+    <img class="logo-main" src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png" alt="PB Days logo"/>
+    <div class="main-title" data-aos="fade-down">Your PB Days Collection</div>
+    <div class="pb-cash-banner glow" data-aos="fade-zoom-in" data-aos-duration="1100">
+      %PB_CASH_SECTION%
     </div>
-
-    <div style="text-align:center;margin-top:2.6em;margin-bottom:1.4em;">
-      <button class="cr-btn-solid" id="back-btn">← Back to Reveal</button>
+    <div class="mini-title" data-aos="fade-up" style="margin-top:1.3em;">My Cards</div>
+    <div class="cr-card-deck" id="col-deck"></div>
+    <div class="mini-title" style="margin-top:2.5em;margin-bottom:1em;" data-aos="fade-down">Rewards</div>
+    <div id="reward-section"></div>
+    <div class="mini-title" style="margin-top:2.5em;" data-aos="fade-left">Leaderboard</div>
+    <div id="leaderboard" class="section-box" data-aos="fade-up" style="margin-bottom:3em;"></div>
+    <div style="text-align:center;margin-top:3.5em;margin-bottom:1em;">
+      <button class="cr-btn-main" id="back-btn">← Back to Reveal</button>
     </div>
   </div>
-
-  <!-- Audio -->
-  <audio id="bg-music" src="" loop preload="auto"></audio>
-  <audio id="sfx-redeem" src="" preload="auto"></audio>
-  <script>
-  window.ENV = {
-    SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
-    SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpemZ1ZHh4bXFvaGxsbGlkY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODM2NjYsImV4cCI6MjA3ODc1OTY2Nn0._VzTpjPudZ9kyq-cHKR-0xJP8rix7pgntjL2Acc3hY0"
-  };
-</script>
-  
-  <!-- Supabase + scripts -->
+  <!-- AUDIO -->
+  <audio id="bg-music" src="https://audio.com/syed-maaz-ahmed/audio/mixkit-game-level-completed-2059" loop preload="auto"></audio>
+  <audio id="pb-cash-sfx" src="https://audio.com/syed-maaz-ahmed/audio/mixkit-magic-sweep-game-trophy-257" preload="auto"></audio>
+  <audio id="redeem-sfx" src="https://audio.com/syed-maaz-ahmed/audio/mixkit-magic-sweep-game-trophy-257" preload="auto"></audio>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/reward-logic.js"></script>
   <script src="js/supabase-client.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
   <script src="js/app-redeem.js"></script>
+  <script>
+    AOS.init({ once: true, duration: 1300, easing: 'cubic-bezier(.19,.66,.58,.94)' });
+  </script>
 </body>
 </html>
