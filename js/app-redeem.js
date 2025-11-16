@@ -320,11 +320,13 @@
       pbCashAmount = 40; // Override amount
     } else {
       // Fetch user's order to calculate
-      let { data: orderData } = await fetch('/.netlify/functions/magento-fetch', {
+      // FIX: Changed `let { data: orderData }` to `let orderData`
+      let orderData = await fetch('/.netlify/functions/magento-fetch', {
         method: "POST", body: JSON.stringify({ email: userEmail }), headers: { 'Content-Type': 'application/json' }
       }).then(res => res.json());
       
-      if (orderData.success && orderData.order.items) {
+      // FIX: Added a check to ensure orderData is not undefined before accessing .success
+      if (orderData && orderData.success && orderData.order.items) {
          // Need product prices from products_ordered
          let { data: prods } = await supabase.from('products_ordered')
            .select('p_code, product_price')
@@ -333,6 +335,8 @@
          if (prods) {
            pbCashAmount = window.calculatePbCash(prods);
          }
+      } else {
+        console.warn("Could not get order data for PB cash calc:", orderData.error || "No order data");
       }
     }
     
