@@ -1,31 +1,48 @@
-// Produces card and reward logic based on SKU/segment DB records or logic
-function calculateRewardsForSKUs(skuObjs, tierProductsMap) {
-  // For PB Cash: Only 1 SKU in order AND price < 1000
-  if (skuObjs.length === 1 && skuObjs[0].product_price < 1000) {
-    return { mode: "pb_cash", pb_cash: Math.round(skuObjs[0].product_price) * 0.01 };
-  }
-  // Determine card count for this order/user
-  const userCards = Array.from(
-    new Set(skuObjs.map(sku => sku.segment_code_to_card)) // build the card list
-  );
-  let cardCount = userCards.length;
-  let tier = "";
-  if (cardCount === 1) tier = '1';
-  else if (cardCount >= 2 && cardCount <= 4) tier = '2-4';
-  else if (cardCount >= 5 && cardCount <= 6) tier = '5-6';
-  else if (cardCount === 7) tier = '7';
+// reward-logic.js — ALL real logic, no samples
 
-  return { mode: "cards", userCards, cardCount, tier };
+// Helper: fetch live eligible rewards for a user's card tier
+async function getLiveRewardsByTier(tier) {
+  if (!window.supabase) return [];
+  let { data, error } = await supabase
+    .from('reward_products')
+    .select('sku,product_name,image_url,remainingqty,tier')
+    .eq('tier', tier)
+    .eq('is_active', true)
+    .order('product_name');
+  if (error) { console.error("reward_products error: ", error); return []; }
+  return data;
 }
 
-// getSegmentCardMapping(): fetches from supabase `segment_cards`
-async function getSegmentCardMapping() {
-  if (!window.supabase) return {};
-  const { data, error } = await supabase
+// Given a customer's SKUs, assign cards via segment_code mapping
+async function getCardsFromOrderSkus(p_codes) {
+  if (!window.supabase) return [];
+  let { data: prods, error: prodErr } = await supabase
+    .from('products_ordered')
+    .select('p_code,segment_code,product_price')
+    .in('p_code', p_codes);
+  if (prodErr || !prods.length) return [];
+  let { data: segMappers, error: segErr } = await supabase
     .from('segment_cards')
-    .select('segment_code, card_name');
-  if (error) { console.error('getSegmentCardMapping error:', error); return {}; }
-  const map = {};
-  data.forEach(row => map[row.segment_code] = row.card_name);
-  return map;
+    .select('segment_code,card_name');
+  let segMap = {};
+  segMappers.forEach(row => segMap[row.segment_code] = row.card_name);
+  // Assign 1 card per unique segment_code in this order
+  let cardSet = new Set();
+  prods.forEach(p => {
+    const card = segMap[p.segment_code];
+    if (card) cardSet.add(card);
+  });
+  return Array.from(cardSet);
 }
+
+// PB Cash calculation logic: Single eligible SKU orders only (<1000 Rs)
+function calculatePbCash(skuObjList) {
+  if (skuObjList.length === 1 && skuObjList[0].product_price < 1000) {
+    return Math.round(skuObjList[0].product_price * 0.01); // always round
+  }
+  return 0;
+}
+
+window.getLiveRewardsByTier = getLiveRewardsByTier;
+window.getCardsFromOrderSkus = getCardsFromOrderSkus;
+window.calculatePbCash = calculatePbCash;
