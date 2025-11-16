@@ -30,11 +30,13 @@
   let isMuted = true; // Start muted until user interacts
   let userInteracted = false;
 
-  try {
-    bgMusic.src = config.sounds.bg;
-    sfxRedeem.src = config.sounds.redeem;
-    sfxPbCash.src = config.sounds.reveal; 
-  } catch(e) { console.warn("Could not set audio sources", e); }
+  function loadAudio() {
+    try {
+      bgMusic.src = config.sounds.bg;
+      sfxRedeem.src = config.sounds.redeem;
+      sfxPbCash.src = config.sounds.reveal; 
+    } catch(e) { console.warn("Could not set audio sources", e); }
+  }
   
   function playSfx(sfx) {
     if (isMuted || !userInteracted) return;
@@ -47,6 +49,10 @@
   }
 
   function toggleMute() {
+    if (!userInteracted) {
+        // This is the first interaction, so load the audio
+        loadAudio();
+    }
     userInteracted = true; // First click counts as interaction
     isMuted = !isMuted;
     
@@ -57,7 +63,9 @@
     } else {
       try {
         bgMusic.play();
-      } catch(e) {}
+      } catch(e) {
+        console.warn("BG music play failed.", e);
+      }
       iconMuted.style.display = 'none';
       iconUnmuted.style.display = 'block';
     }
@@ -68,10 +76,8 @@
   // Also try to play on any click if not yet interacted
   document.body.addEventListener('pointerdown', () => {
     if (!userInteracted) {
-        userInteracted = true;
-        if (!isMuted) {
-             try { bgMusic.play(); } catch(e) {}
-        }
+        // Don't auto-play, wait for mute button click
+        // This prevents the "NotAllowedError"
     }
   }, { once: true });
 
@@ -451,7 +457,7 @@
     renderCardSlider(userCards); // NEW
     renderRockSlider(cardCount);
     // renderCardGrid(); // REMOVED
-    setupGalleryModal();
+    setupGalleryModal(); // This will now work
     
     await renderRewardGrid();
     await renderLeaderboard();
