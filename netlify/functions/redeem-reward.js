@@ -51,7 +51,7 @@ exports.handler = async (event, context) => {
   // Init Supabase client
   const supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY
+    process.env.SUPABASE_SERVICE_KEY // <-- ★★★ THIS IS THE FIX ★★★
   );
 
   try {
