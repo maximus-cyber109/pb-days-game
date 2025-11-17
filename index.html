@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
   
-
+  <!-- App Config: Add your public keys here -->
   <script>
     window.APP_CONFIG = {
       SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
@@ -16,7 +16,7 @@
     };
   </script>
   
-
+  <!-- NO Webengage scripts -->
 
 </head>
 <body>
@@ -30,34 +30,18 @@
 
   <div id="reveal-stage">
     
-
-    <div id="play-modal" style="display: none;">
-      <div class="pb-cash-text">COLLECT YOUR CARDS</div>
-      <button class="btn-3d-glass" id="play-btn">PLAY</button>
-    </div>
-
-
-    <div id="loading-message" class="loading-container" style="display: none;">
+    <!-- Loading Message (Visible by default) -->
+    <div id="loading-message" class="loading-container">
       <div class="pb-cash-text">Thank You For Your Order!</div>
-      <div class="loading-subtext" id="loading-subtext">Loading Assets...</div>
+      <div class="loading-subtext" id="loading-subtext">Fetching Your Cards...</div>
       <div class="spinner"></div>
     </div>
-
+    <!-- JS will fill this area after loading -->
   </div>
 
   <button class="btn-3d-glass" id="reveal-redeem-btn" style="display:none; opacity: 0; transition: opacity 0.5s;">
     Redeem Cards
   </button>
-
-  <div class="modal-bg show" id="intro-modal">
-    <div class="modal-fg">
-      <div class="pb-cash-text">Welcome, Collector!</div>
-      <div class="redeem-success-delivery" style="font-size: 1rem; color: #eee;">
-        Your new PB Days Cards are ready.
-      </div>
-      <button class="btn-3d-glass" id="intro-play-btn" style="font-size: 1.3rem; margin-top: 1em;">Click to Play</button>
-    </div>
-  </div>
 
   <!-- App scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
