@@ -22,7 +22,7 @@ async function sendWebengageEvent(eventName, data) {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
-      timeout: 5000
+      timeout: 10000 // ★★★ THIS IS THE FIX (was 5000) ★★★
     });
     console.log(`Webengage event [${eventName}] sent for ${data.email}`);
   } catch (error) {
@@ -57,7 +57,7 @@ exports.handler = async (event, context) => {
   try {
     // 1. Log the PB Cash claim (Uses UNIQUE customer_email constraint)
     let { error } = await supabase.from('pb_cash').insert({ 
-      customer_email: email, // ★★★ THIS IS THE FIX (was 'email:') ★★★
+      customer_email: email, 
       order_id_used: orderIdUsed,
       amount: amount, 
       redeemed_at: new Date().toISOString() 
