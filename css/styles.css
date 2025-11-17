@@ -234,8 +234,9 @@ body {
   opacity: 0.6;
 }
 .reveal-card-static.revealed {
-  opacity: 0; 
-  transform: scale(0.5); 
+  /* !!!!! FIX: Changed opacity from 0 to 1 !!!!! */
+  opacity: 1; 
+  transform: scale(1); 
   background: transparent;
   border-color: transparent;
   filter: drop-shadow(0 0 15px rgba(142, 142, 243, 0.8)) 
