@@ -210,9 +210,14 @@
       const response = await fetch('/.netlify/functions/redeem-reward', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // ★★★ THIS IS THE FIX ★★★
+        // We now send the customerName and cardsHeldCount
+        // which are available as global variables in this file.
         body: JSON.stringify({
           email: userEmail,
-          reward: reward
+          reward: reward,
+          customerName: customerName, // Added
+          cardsHeldCount: uniqueEarnedCards.length // Added
         })
       });
 
@@ -362,7 +367,8 @@
           body: JSON.stringify({
             email: userEmail,
             orderIdUsed: lastOrderId,
-            amount: pbCashAmount
+            amount: pbCashAmount,
+            customerName: customerName // Added
           })
         });
 
