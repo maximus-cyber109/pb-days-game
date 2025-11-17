@@ -1,6 +1,6 @@
 // app-redeem.js
 (async function() {
-  'useT strict';
+  'use strict';
 
   // --- CONFIG & GLOBAL VARS ---
   const config = window.CR_CONFIG;
@@ -26,6 +26,10 @@
   let mainTier = "1";
   let customerName = "";
   let lastOrderId = 'N/A'; // For logging PB Cash claims
+  
+  // NEW: Placeholders for redeemed items
+  let redeemedItem = null;
+  let redeemedCash = null;
 
   // --- UTILITY ---
   function getOverrideTier(email) {
@@ -95,6 +99,11 @@
     
     rewardSection.innerHTML = ""; // Clear it
     
+    // **NEW**: If already redeemed, we skip this
+    if (redeemedItem || redeemedCash) {
+      return;
+    }
+
     if (mainTier === '1') {
       // User has 1 card, show "Unlock More" prompt
       rewardSection.innerHTML = `<div class="reward-tier1-prompt">
@@ -136,7 +145,8 @@
             redeemBtn.className = "btn-3d-glass";
             
             if (reward.remainingqty <= 0) {
-              redeemBtn.textContent = "Out of Stock";
+              // CHANGED: Button text
+              redeemBtn.textContent = "Already Claimed";
               redeemBtn.disabled = true;
             } else {
               redeemBtn.textContent = "Redeem";
@@ -149,6 +159,20 @@
           }
         }
     }
+
+    // **NEW: Always add the "Unlock More" tile**
+    const unlockCard = document.createElement('a');
+    unlockCard.className = "product-card unlock-more";
+    unlockCard.href = "https://pinkblue.in";
+    unlockCard.target = "_blank";
+    unlockCard.rel = "noopener noreferrer";
+    unlockCard.innerHTML = `
+      <img src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png" alt="Unlock More" class="product-img" style="opacity: 0.5;">
+      <div class="product-name">Unlock More Tiers!</div>
+      <div class="product-price" style="color: #a394f5; font-size: 0.9rem; flex-grow: 1; margin-top: 1em;">Place new orders to collect all 7 cards and reach the top rewards.</div>
+      <button class="btn-3d-glass" style="margin-top: 1em;">Shop Now</button>
+    `;
+    rewardSection.appendChild(unlockCard);
   }
   
   async function renderLeaderboard() {
@@ -186,57 +210,48 @@
       location.reload();
     };
   }
-
-  // **LOGIC CHANGE: Redeems against CUSTOMER_EMAIL**
+  
+  // **LOGIC CHANGE: Calls new Netlify Function**
   async function handleRedeemClick(reward, button) {
     button.textContent = "Checking...";
     button.disabled = true;
 
     try {
-      // 1. Check stock
-      let { data: product, error: fetchError } = await window.supabaseClient
-        .from('reward_products')
-        .select('remainingqty')
-        .eq('sku', reward.sku)
-        .single();
+      // Call the backend function to handle everything
+      const response = await fetch('/.netlify/functions/redeem-reward', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userEmail,
+          customerName: customerName,
+          cardsHeldCount: uniqueEarnedCards.length,
+          reward: reward // Pass the full reward object
+        })
+      });
 
-      if (fetchError || product.remainingqty <= 0) {
-        button.textContent = "Out of Stock";
-        throw new Error("Reward is out of stock.");
-      }
+      const result = await response.json();
 
-      // 2. Log the redemption (Uses UNIQUE customer_email constraint)
-      let { error: logError } = await window.supabaseClient
-        .from('rewards_redeemed')
-        .insert({
-          customer_email: userEmail,
-          reward_sku: reward.sku,
-          reward_name: reward.product_name,
-          reward_tier: reward.tier
-        });
-        
-      if (logError) {
-          if (logError.code === '23505') { // Unique constraint violation
-              throw new Error("You have already claimed a reward.");
-          }
-          throw logError;
+      if (!response.ok) {
+        throw new Error(result.error || "Redemption failed");
       }
       
-      // 3. Update stock (do this last)
-      const newQty = product.remainingqty - 1;
-      await window.supabaseClient
-        .from('reward_products')
-        .update({ remainingqty: newQty })
-        .eq('sku', reward.sku);
-        
+      // Success!
       button.textContent = "Redeemed!";
       showRedeemSuccessModal(reward);
-      
+
     } catch (err) {
       console.error("Redemption failed:", err.message);
-      button.textContent = err.message.includes("already claimed") ? "Already Claimed" : "Error! Try Again";
+      if (err.message.includes("stock")) {
+        button.textContent = "Out of Stock";
+      } else if (err.message.includes("claimed")) {
+        button.textContent = "Already Claimed";
+      } else {
+        button.textContent = "Error! Try Again";
+        button.disabled = false; // Let them try again
+      }
     }
   }
+
 
   function setupGalleryModal() {
     const modal = document.getElementById('gallery-modal');
@@ -290,6 +305,12 @@
     const modal = document.getElementById('pb-cash-modal');
     const textEl = document.getElementById('pb-cash-text');
     const claimBtn = document.getElementById('pb-cash-claim');
+    
+    // **NEW**: If already redeemed, hide
+    if (redeemedItem || redeemedCash) {
+      showBtn.style.display = 'none';
+      return;
+    }
     
     // Only show PB Cash button if this user is Tier 1
     if (mainTier !== '1') {
@@ -345,26 +366,42 @@
       claimBtn.disabled = true;
       claimBtn.textContent = "Claiming...";
       
-      let { error } = await window.supabaseClient.from('pb_cash').insert({ 
-        email: userEmail, 
-        order_id_used: lastOrderId, // Log which order triggered this
-        amount: pbCashAmount, 
-        redeemed_at: new Date().toISOString() 
-      });
-      
-      if (error) {
-        if (error.code === '23505') { // Unique constraint violation
-            claimBtn.textContent = "Already Claimed";
-        } else {
-            console.error("PB Cash claim error:", error);
-            claimBtn.textContent = "Error! Try Again";
-            claimBtn.disabled = false;
+      try {
+        // **LOGIC CHANGE: Call new backend function**
+        const response = await fetch('/.netlify/functions/redeem-cash', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: userEmail,
+            customerName: customerName,
+            orderIdUsed: lastOrderId,
+            amount: pbCashAmount
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Claim failed");
         }
-      } else {
+
+        // Success!
         claimBtn.textContent = "Claimed!";
+        
+        // **WEBENGAGE EVENT REMOVED from frontend**
+
         modal.classList.remove('show');
         // Reload the page to show the "already redeemed" message
         location.reload();
+
+      } catch (err) {
+        console.error("PB Cash claim error:", err.message);
+        if (err.message.includes("claimed")) {
+          claimBtn.textContent = "Already Claimed";
+        } else {
+          claimBtn.textContent = "Error! Try Again";
+          claimBtn.disabled = false;
+        }
       }
     }
     
@@ -373,7 +410,7 @@
     }
   }
 
-  // --- Main Execution ---
+  // --- Initialization ---
   async function mainRedeem() {
     if (!userEmail) {
       document.body.innerHTML = `<div class="pb-cash-text" style="padding-top: 100px; text-align:center;">No email provided. Go back and enter your email.</div>`;
@@ -381,6 +418,8 @@
     }
 
     initSupabase();
+
+    // REMOVED Webengage Login
     
     overrideInfo = getOverrideTier(userEmail);
     userIsOverride = !!overrideInfo;
@@ -389,7 +428,8 @@
     if (!userIsOverride) {
       const { data: existingRedemption, error: checkError } = await window.supabaseClient
           .from('rewards_redeemed')
-          .select('reward_name')
+          // **NEW: Fetch SKU to get image**
+          .select('reward_name, reward_sku')
           .eq('customer_email', userEmail)
           .single();
           
@@ -400,14 +440,29 @@
           .single();
 
       if (existingRedemption) {
+        redeemedItem = existingRedemption; // Store it
         document.getElementById('redemption-area').style.display = 'none';
         const msgEl = document.getElementById('already-redeemed-area');
-        msgEl.innerHTML = `You have already claimed your one-time reward:<br><strong style="color:#fedc07; font-size: 1.2em;">${existingRedemption.reward_name}</strong>`;
+        
+        // **NEW: Fetch image for redeemed product**
+        const { data: product } = await window.supabaseClient
+          .from('reward_products')
+          .select('image_url')
+          .eq('sku', redeemedItem.reward_sku)
+          .single();
+
+        document.getElementById('redeemed-item-img').src = product ? product.image_url : config.logo;
+        document.getElementById('redeemed-item-message').innerHTML = `You have already claimed your one-time reward:<br><strong style="color:#fedc07; font-size: 1.2em;">${redeemedItem.reward_name}</strong>`;
         msgEl.style.display = 'block';
+
       } else if (existingCash) {
+        redeemedCash = existingCash; // Store it
         document.getElementById('redemption-area').style.display = 'none';
         const msgEl = document.getElementById('already-redeemed-area');
-        msgEl.innerHTML = `You have already claimed your one-time reward:<br><strong style="color:#fedc07; font-size: 1.2em;">PB Cash ₹${existingCash.amount}</strong>`;
+        
+        // **NEW: Show cash icon**
+        document.getElementById('redeemed-item-img').src = 'https://placehold.co/150x150/fdd835/3f227b?text=PB%20CASH';
+        document.getElementById('redeemed-item-message').innerHTML = `You have already claimed your one-time reward:<br><strong style="color:#fedc07; font-size: 1.2em;">PB Cash ₹${redeemedCash.amount}</strong>`;
         msgEl.style.display = 'block';
       }
     }
