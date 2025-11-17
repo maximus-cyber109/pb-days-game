@@ -85,7 +85,8 @@
 
     try {
       // 1. Get ALL unique cards for this user
-      const { data, error } = await supabase
+      // FIX: Use the global client
+      const { data, error } = await window.supabaseClient
         .from('cards_earned')
         .select('card_name', { count: 'exact', head: false }) // Use head: false
         .eq('customer_email', email);
@@ -96,7 +97,8 @@
       const uniqueCardCount = uniqueCards.length;
 
       // 2. Upsert (insert or update) the customer_stats table
-      const { error: upsertError } = await supabase
+      // FIX: Use the global client
+      const { error: upsertError } = await window.supabaseClient
         .from('customer_stats')
         .upsert(
           { 
@@ -168,7 +170,8 @@
 
         let newCardsEarned = [];
         for (const card of revealCards) {
-          let { data: existing, error } = await supabase.from('cards_earned')
+          // FIX: Use the global client
+          let { data: existing, error } = await window.supabaseClient.from('cards_earned')
             .select('id')
             .eq('customer_email', userEmail)
             .eq('card_name', card)
@@ -179,7 +182,8 @@
           if (!existing || existing.length === 0) {
             console.log(`Granting card ${card} for order ${order_id}`);
             newCardsEarned.push(card);
-            await supabase.from('cards_earned').insert({
+            // FIX: Use the global client
+            await window.supabaseClient.from('cards_earned').insert({
               customer_email: userEmail,
               card_name: card,
               order_id: order_id,
