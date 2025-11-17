@@ -51,7 +51,7 @@ exports.handler = async (event, context) => {
   // Init Supabase client
   const supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY // <-- ★★★ THIS IS THE FIX ★★★
+    process.env.SUPABASE_SERVICE_KEY // Using Service Key for backend logic
   );
 
   try {
@@ -70,8 +70,8 @@ exports.handler = async (event, context) => {
       throw error;
     }
     
-    // 2. Send Webengage event
-    await sendWebengageEvent('pb_cash_redeemed', {
+    // 2. Send Webengage event (NO AWAIT)
+    sendWebengageEvent('pb_cash_redeemed', { // ★★★ THIS IS THE FIX ★★★
       email: email,
       amount: amount,
       order_id_used: orderIdUsed,
