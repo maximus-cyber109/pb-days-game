@@ -36,6 +36,28 @@
   
   // --- UI Rendering ---
 
+  // !!!!! FIX: RE-ADDED THE MISSING renderRockSlider FUNCTION !!!!!
+  function renderRockSlider(count) {
+    const rocksContainer = document.getElementById('slider-rocks');
+    const innerBar = document.getElementById('coc-progress-inner');
+    const textEl = document.getElementById('slider-text');
+    
+    if (!rocksContainer || !innerBar || !textEl) {
+        console.error("Progress bar elements not found!");
+        return;
+    }
+
+    let rocksHtml = "";
+    for (let i = 0; i < TOTAL_CARDS_TO_COLLECT; i++) {
+      rocksHtml += `<span class="coc-progress-rock${i < count ? " earned" : ""}"></span>`;
+    }
+    rocksContainer.innerHTML = rocksHtml;
+    
+    const percentage = (count / TOTAL_CARDS_TO_COLLECT) * 100;
+    innerBar.style.width = `${percentage}%`;
+    textEl.innerText = `${count}/${TOTAL_CARDS_TO_COLLECT}`;
+  }
+
   function renderCardSlider(earnedCards) {
     const container = document.getElementById('card-slider-container');
     const track = document.getElementById('card-slider-track');
