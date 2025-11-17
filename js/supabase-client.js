@@ -1,41 +1,25 @@
 // Clash Royale UI — Supabase client using Netlify ENV pattern
 
-let supabase = null;
+// FIX: Create the client on the window object to make it global
+window.supabaseClient = null;
 
 function initSupabase() {
-  // Netlify must inject window.ENV. 
-  // (If not, add <script>window.ENV = {SUPABASE_URL: "...",SUPABASE_KEY: "..."};</script> to HTML!)
-  if (!window.ENV || !window.ENV.SUPABASE_URL || !window.ENV.SUPABASE_KEY) {
-    console.error('Supabase credentials not found in ENV');
+  // Read from the new global config block
+  if (!window.APP_CONFIG || !window.APP_CONFIG.SUPABASE_URL || !window.APP_CONFIG.SUPABASE_KEY) {
+    console.error('Supabase credentials not found in window.APP_CONFIG');
     return;
   }
-  supabase = window.supabase.createClient(
-    window.ENV.SUPABASE_URL,
-    window.ENV.SUPABASE_KEY
+  // FIX: Assign the client to the global variable
+  window.supabaseClient = window.supabase.createClient(
+    window.APP_CONFIG.SUPABASE_URL,
+    window.APP_CONFIG.SUPABASE_KEY
   );
   console.log('Supabase initialized');
 }
 
 // Example: customer cards
 async function getCustomerCards(email) {
-  if (!supabase) throw new Error("Supabase not initialized!");
-  const { data, error } = await supabase
+  // FIX: Use the global client
+  if (!window.supabaseClient) throw new Error("Supabase not initialized!");
+  const { data, error } = await window.supabaseClient
     .from('cards_earned')
-    .select('*')
-    .eq('customer_email', email)
-    .order('earned_at', { ascending: false });
-  if (error) throw error;
-  return data || [];
-}
-
-// Example: leaderboard
-async function getLeaderboard(limit=10) {
-  if (!supabase) throw new Error("Supabase not initialized!");
-  const { data, error } = await supabase
-    .from('customer_stats')
-    .select('*')
-    .order('unique_cards', { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  return data || [];
-}
