@@ -22,7 +22,7 @@ async function sendWebengageEvent(eventName, data) {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
-      timeout: 5000
+      timeout: 10000 // ★★★ THIS IS THE FIX (was 5000) ★★★
     });
     console.log(`Webengage event [${eventName}] sent for ${data.email}`);
   } catch (error) {
@@ -97,9 +97,7 @@ exports.handler = async (event, context) => {
     }
       
     // 4. Send Webengage event (NO AWAIT)
-    // This is the fix: removing 'await' lets the function finish
-    // without waiting for the Webengage API, preventing a timeout.
-    sendWebengageEvent('pb_reward_redeemed', { // ★★★ THIS IS THE FIX ★★★
+    sendWebengageEvent('pb_reward_redeemed', { 
       email: email,
       reward_sku: reward.sku,
       reward_name: reward.product_name,
