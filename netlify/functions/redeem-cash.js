@@ -1,7 +1,7 @@
-const axios = require('axios');
+const axios = require('axios'); // Still needed for the main handler, but not helper
 const { createClient } = require('@supabase/supabase-js');
 
-// --- Webengage Helper Function ---
+// --- Webengage Helper Function (MODIFIED) ---
 async function sendWebengageEvent(eventName, data) {
   const licenseCode = process.env.WEBENGAGE_LICENSE_CODE;
   const apiKey = process.env.WEBENGAGE_API_KEY;
@@ -10,21 +10,35 @@ async function sendWebengageEvent(eventName, data) {
     console.warn('Webengage ENV not configured. Skipping event.');
     return;
   }
+  
   const apiUrl = `https://api.webengage.com/v1/accounts/${licenseCode}/events`;
+  console.log(`Attempting to send Webengage event [${eventName}] to URL: ${apiUrl}`);
+
   try {
     const payload = {
       userId: data.email, // Use email as the primary ID
       eventName: eventName,
       eventData: data
     };
-    await axios.post(apiUrl, payload, {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      timeout: 10000 // ★★★ THIS IS THE FIX (was 5000) ★★★
+    
+    // ★★★ THIS IS THE FIX: Using fetch() like your working example ★★★
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
     });
-    console.log(`Webengage event [${eventName}] sent for ${data.email}`);
+
+    if (response.ok) {
+        console.log(`Webengage event [${eventName}] sent for ${data.email}`);
+    } else {
+        console.error(`Webengage event [${eventName}] failed with status:`, response.status);
+        const errorData = await response.json().catch(() => ({})); // Try to get error details
+        console.error('Webengage error response data:', errorData);
+    }
+  
   } catch (error) {
     console.error(`Webengage event [${eventName}] failed:`, error.message);
   }
@@ -32,6 +46,7 @@ async function sendWebengageEvent(eventName, data) {
 // --- End Webengage Helper ---
 
 // --- Main Handler ---
+// (This part is unchanged and correct)
 exports.handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -41,50 +56,38 @@ exports.handler = async (event, context) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
-
   const { email, customerName, orderIdUsed, amount } = JSON.parse(event.body);
-
   if (!email || !orderIdUsed || !amount) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing email, order, or amount' }) };
   }
-  
-  // Init Supabase client
   const supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY // Using Service Key for backend logic
+    process.env.SUPABASE_SERVICE_KEY
   );
-
   try {
-    // 1. Log the PB Cash claim (Uses UNIQUE customer_email constraint)
     let { error } = await supabase.from('pb_cash').insert({ 
       customer_email: email, 
       order_id_used: orderIdUsed,
       amount: amount, 
       redeemed_at: new Date().toISOString() 
     });
-    
     if (error) {
-      if (error.code === '23505') { // Unique constraint violation
+      if (error.code === '23505') {
           throw new Error("You have already claimed a reward.");
       }
       throw error;
     }
-    
-    // 2. Send Webengage event (NO AWAIT)
     sendWebengageEvent('pb_cash_redeemed', { 
       email: email,
       amount: amount,
       order_id_used: orderIdUsed,
       customer_name: customerName
     });
-
-    // 3. Success
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({ success: true, message: 'PB Cash redeemed!' })
     };
-
   } catch (err) {
     console.error("PB Cash claim error:", err.message);
     return {
