@@ -23,3 +23,22 @@ async function getCustomerCards(email) {
   if (!window.supabaseClient) throw new Error("Supabase not initialized!");
   const { data, error } = await window.supabaseClient
     .from('cards_earned')
+    .select('*')
+    .eq('customer_email', email)
+    .order('earned_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+// Example: leaderboard
+async function getLeaderboard(limit=10) {
+  // FIX: Use the global client
+  if (!window.supabaseClient) throw new Error("Supabase not initialized!");
+  const { data, error } = await window.supabaseClient
+    .from('customer_stats')
+    .select('*')
+    .order('unique_cards', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data || [];
+}
