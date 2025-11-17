@@ -4,42 +4,54 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>PB Days Reveal</title>
-  <!-- FIX: Added favicon to stop 404 error -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👑</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
+  
+  <!-- Environment config -->
+  <script>
+    // This must be defined *before* the webengage script
+    window.ENV = {
+      SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
+      SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpemZ1ZHh4bXFvaGxsbGlkY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODM2NjYsImV4cCI6MjA3ODc1OTY2Nn0._VzTpjPudZ9kyq-cHKR-0xJP8rix7pgntjL2Acc3hY0",
+      WEBENGAGE_LICENSE_CODE: "~ENV.WEBENGAGE_LICENSE_CODE"
+    };
+  </script>
+  
+  <!-- Webengage Integration -->
+  <script>
+    var webengage;
+    !function(w,e,b,n,g){if(!w[n]){w[n]={};var t=w[n].q=w[n].q||[];w[n].config=g||{};
+    var f=['track','login','setAttribute'];for(var i=0;i<f.length;i++)w[n][f[i]]=function(f){
+    return function(){var a=[].slice.call(arguments);a.unshift(f);t.push(a)}}(f[i]);
+    var s=e.createElement(b);s.async=1;s.src='https://widgets.webengage.com/js/webengage-min-v-8.0.js';
+    var r=e.getElementsByTagName(b)[0];r.parentNode.insertBefore(s,r)
+    }}(window,document,'script','webengage', {licenseCode: window.ENV.WEBENGAGE_LICENSE_CODE});
+  </script>
 </head>
 <body>
   
-  <!-- Mute Button (REMOVED) -->
-
-  <!-- Starfield Background -->
   <div class="stars">
     <div class="star"></div><div class="star"></div><div class="star"></div>
-    <!-- ... more stars ... -->
     <div class="star"></div><div class="star"></div><div class="star"></div>
   </div>
 
   <img src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png" alt="PB Days" class="pb-logo" />
 
   <div id="reveal-stage">
-    <!-- JS will fill this area -->
+    <!-- NEW: Loading Message -->
+    <div id="loading-message" class="loading-container">
+      <div class="pb-cash-text">Thank You For Your Order!</div>
+      <div class="loading-subtext" id="loading-subtext">Loading Assets...</div>
+      <div class="spinner"></div>
+    </div>
+    <!-- JS will fill this area after loading -->
   </div>
 
-  <button class="btn-3d-glass" id="reveal-redeem-btn" style="display:none;">
+  <button class="btn-3d-glass" id="reveal-redeem-btn" style="display:none; opacity: 0; transition: opacity 0.5s;">
     Redeem Cards
   </button>
 
-  <!-- Audio elements (REMOVED) -->
-
-  <!-- Environment config -->
-  <script>
-    window.ENV = {
-      SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
-      SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpemZ1ZHh4bXFvaGxsbGlkY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODM2NjYsImV4cCI6MjA3ODc1OTY2Nn0._VzTpjPudZ9kyq-cHKR-0xJP8rix7pgntjL2Acc3hY0"
-    };
-  </script>
-  
   <!-- App scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
