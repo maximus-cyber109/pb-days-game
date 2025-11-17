@@ -5,9 +5,10 @@
   "main": "index.html",
   "scripts": {
     "dev": "netlify dev",
-    "build": "npm install"
+    "build": "echo 'No build step needed for static site'"
   },
   "dependencies": {
-    "axios": "^1.6.2"
+    "axios": "^1.6.2",
+    "@supabase/supabase-js": "^2.39.0"
   }
 }
