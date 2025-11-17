@@ -2,32 +2,29 @@
 
 // Helper: fetch live eligible rewards for a user's card tier
 async function getLiveRewardsByTier(tier) {
-  // FIX: Check for the global client instance
   if (!window.supabaseClient) {
     console.error("Supabase client not initialized in getLiveRewardsByTier");
     return [];
   }
-  // FIX: Use the global client
   let { data, error } = await window.supabaseClient
     .from('reward_products')
     .select('sku,product_name,image_url,remainingqty,tier,price') // ADDED: price
     .eq('tier', tier)
     .eq('is_active', true)
-    .order('product_name');
+     // CHANGED: Sort by price descending
+    .order('price', { ascending: false });
   if (error) { console.error("reward_products error: ", error); return []; }
   return data;
 }
 
 // **LOGIC CHANGE: Reverted to UNIQUE cards per order**
 async function getCardsFromOrderSkus(p_codes) {
-  // FIX: Check for the global client instance
   if (!window.supabaseClient) {
     console.error("Supabase client not initialized in getCardsFromOrderSkus");
     return [];
   }
   
   // 1. Get products from the order
-  // FIX: Use the global client
   let { data: prods, error: prodErr } = await window.supabaseClient
     .from('products_ordered')
     .select('p_code,segment_code,product_price')
@@ -43,7 +40,6 @@ async function getCardsFromOrderSkus(p_codes) {
   }
 
   // 2. Get segment-to-card mapping
-  // FIX: Use the global client
   let { data: segMappers, error: segErr } = await window.supabaseClient
     .from('segment_cards')
     .select('segment_code,card_name');
@@ -73,11 +69,10 @@ async function getCardsFromOrderSkus(p_codes) {
 function calculatePbCash(skuObjList) {
   if (!skuObjList || skuObjList.length === 0) return 0;
   
-  // Find the first eligible product (price < 1000)
   const eligibleProd = skuObjList.find(p => p.product_price < 1000);
 
   if (skuObjList.length === 1 && eligibleProd) {
-    return Math.round(eligibleProd.product_price * 0.01); // always round
+    return Math.round(eligibleProd.product_price * 0.01);
   }
   return 0;
 }
