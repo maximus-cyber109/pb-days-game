@@ -57,7 +57,7 @@ exports.handler = async (event, context) => {
   try {
     // 1. Log the PB Cash claim (Uses UNIQUE customer_email constraint)
     let { error } = await supabase.from('pb_cash').insert({ 
-      email: email, 
+      customer_email: email, // ★★★ THIS IS THE FIX (was 'email:') ★★★
       order_id_used: orderIdUsed,
       amount: amount, 
       redeemed_at: new Date().toISOString() 
@@ -71,7 +71,7 @@ exports.handler = async (event, context) => {
     }
     
     // 2. Send Webengage event (NO AWAIT)
-    sendWebengageEvent('pb_cash_redeemed', { // ★★★ THIS IS THE FIX ★★★
+    sendWebengageEvent('pb_cash_redeemed', { 
       email: email,
       amount: amount,
       order_id_used: orderIdUsed,
