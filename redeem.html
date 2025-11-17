@@ -14,6 +14,7 @@
     };
   </script>
 
+  <!-- NO Webengage scripts -->
 </head>
 <body>
   
@@ -35,17 +36,11 @@
       <div id="slider-rocks" class="coc-rocks-container"></div>
   </div>
   
-
-  <div class="reward-rules-explainer">
-    <strong>Welcome to the Collector's Hub!</strong><br>
-    All cards you earn are added to your collection. You get <strong>one redemption</strong> per account. Save up your cards from multiple orders to unlock higher tiers!
-  </div>
-
   <div class="button-container">
     <button class="btn-3d-glass" id="open-gallery">View All My Cards</button>
   </div>
 
-
+  <!-- This section will be hidden or replaced if already redeemed -->
   <div id="redemption-area">
     <div class="button-container" style="margin-top: 1.5em;">
       <button class="btn-3d-glass" id="show-pb-cash" style="display:none; background: linear-gradient(145deg,#fdd835 50%,#fff59d 100%); color: #3f227b;">
@@ -54,14 +49,19 @@
     </div>
 
     <div class="mini-title" style="color:#fedc07;">Your Rewards</div>
+    
+    <!-- NEW: Short Rules Text -->
+    <div class="reward-rules-explainer-short">
+      You get <strong>one redemption</strong>. Save up cards to unlock higher tiers!
+    </div>
+    
     <div id="reward-section" class="reward-grid">
       <!-- JS will fill this area -->
     </div>
   </div>
   
-  <!-- NEW: This section will be shown if already redeemed -->
+  <!-- This section will be shown if already redeemed -->
   <div id="already-redeemed-area" class="reward-tier1-prompt" style="display: none; margin-top: 2em; text-align: center;">
-    <!-- NEW: Image will be added here -->
     <img id="redeemed-item-img" src="" alt="Redeemed Item" />
     <div id="redeemed-item-message">
       <!-- JS will fill this message -->
@@ -75,8 +75,24 @@
     Shop More
   </a>
 
+  <!-- NEW: Rules Modal (Shown on load) -->
+  <div class="modal-bg" id="rules-modal">
+    <div class="modal-fg">
+      <div class="pb-cash-text">Welcome, Collector!</div>
+      <div class="redeem-success-delivery" style="font-size: 1rem; color: #eee; text-align: left; line-height: 1.6;">
+        Here's how it works:<br><br>
+        1. All cards you earn are added to your collection.<br>
+        2. You get <strong>one redemption per account</strong>, ever.<br>
+        3. You can redeem now, or...<br>
+        4. ...keep ordering to collect more cards and unlock the best rewards!
+      </div>
+      <button class="btn-3d-glass" id="rules-continue-btn" style="font-size: 1.3rem; margin-top: 1.5em;">Continue</button>
+    </div>
+  </div>
+
   <!-- Gallery Modal (for "View All My Cards") -->
   <div class="modal-bg" id="gallery-modal">
+    <!-- ... (modal content from previous step) ... -->
     <div class="modal-fg gallery-modal-content">
       <button id="gallery-left" class="gallery-arrow-btn">
         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"></path></svg>
@@ -92,6 +108,7 @@
 
   <!-- PB CASH Modal -->
   <div class="modal-bg" id="pb-cash-modal">
+    <!-- ... (modal content from previous step) ... -->
     <div class="modal-fg">
       <div class="pb-cash-text" id="pb-cash-text"></div>
       <button class="btn-3d-glass" id="pb-cash-claim">Claim PB CASH</button>
@@ -101,6 +118,7 @@
 
   <!-- Redeem Success Modal -->
   <div class="modal-bg" id="redeem-success-modal">
+    <!-- ... (modal content from previous step) ... -->
     <div class="modal-fg">
       <div class="redeem-success-title">Reward Claimed!</div>
       <img id="redeem-success-img" src="" alt="product" class="redeem-success-img" />
