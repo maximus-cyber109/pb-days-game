@@ -2,7 +2,6 @@
 (async function() {
   'use strict';
 
-  // --- DOM & Config ---
   const config = window.CR_CONFIG;
   if (!config) {
     console.error("CR_CONFIG not loaded!");
@@ -10,16 +9,23 @@
   }
 
   const CARD_IMAGES = config.cards;
-  const ALL_CARDS = Object.keys(CARD_IMAGES); // 7 cards total
-  const TOTAL_CARDS_TO_COLLECT = 7; // Clash of Clans bar is 7
+  const ALL_CARDS = Object.keys(CARD_IMAGES); 
+  const TOTAL_CARDS_TO_COLLECT = 7; 
 
   let userEmail = new URLSearchParams(location.search).get('email');
   let userIsOverride = false;
   let overrideInfo = null;
-  let userCards = []; // Array of card names user owns
+  let userCards = []; 
   let mainTier = "1";
+  let customerName = ""; // For Webengage
 
-  // --- Audio (REMOVED) ---
+  // --- Webengage Init ---
+  if (typeof webengage !== "undefined" && window.ENV.WEBENGAGE_LICENSE_CODE) {
+    webengage.init(window.ENV.WEBENGAGE_LICENSE_CODE);
+    if(userEmail) {
+      webengage.user.login(userEmail);
+    }
+  }
   
   // --- Utility ---
   function getOverrideTier(email) {
@@ -36,7 +42,6 @@
   
   // --- UI Rendering ---
 
-  // NEW: Render the auto-scrolling card slider
   function renderCardSlider(earnedCards) {
     const container = document.getElementById('card-slider-container');
     const track = document.getElementById('card-slider-track');
@@ -51,12 +56,13 @@
     
     let cardsHtml = '';
     let cardCount = 0;
-    while (cardCount < 20) {
+    // Create a long track for smooth scrolling
+    while (cardCount < 20 || cardsHtml.length < 2000) { // Ensure it's long enough
         for (const cardName of earnedCards) {
             cardsHtml += `<img src="${CARD_IMAGES[cardName]}" alt="${cardName}" class="slider-card-img">`;
             cardCount++;
         }
-        if (earnedCards.length === 0) break; // Safety break
+        if (earnedCards.length === 0) break; 
     }
     
     track.innerHTML = cardsHtml + cardsHtml; // Duplicate track for seamless loop
@@ -82,12 +88,25 @@
     const rewardSection = document.getElementById('reward-section');
     if (!rewardSection) return;
     
-    rewardSection.innerHTML = ""; // Clear
+    rewardSection.innerHTML = "";
+    
+    // NEW: Psychological Trigger for Tier 1
+    if (mainTier === '1') {
+      rewardSection.innerHTML = `<div class="reward-tier1-prompt">
+        You're just one step away!<br>
+        <span style="color:#fedc07; font-size: 1.2em;">Unlock 2+ Cards</span><br>
+        to claim your first amazing rewards!
+      </div>`;
+      return; // Stop here for Tier 1
+    }
     
     const rewards = await window.getLiveRewardsByTier(mainTier);
     
     if (!rewards || rewards.length === 0) {
-      rewardSection.innerHTML = `<p style="text-align:center; opacity:0.7;">No rewards available for the ${mainTier} card tier.</p>`;
+      rewardSection.innerHTML = `<p class="reward-tier1-prompt" style="font-size: 1rem;">
+        No rewards are active for this tier right now.
+        <br>Check back soon!
+      </p>`;
       return;
     }
     
@@ -110,6 +129,11 @@
       title.className = "product-name";
       title.textContent = reward.product_name;
       c.appendChild(title);
+      
+      let priceEl = document.createElement('div');
+      priceEl.className = "product-price";
+      priceEl.textContent = `₹${(reward.price || 0).toFixed(2)}`;
+      c.appendChild(priceEl);
       
       let redeemBtn = document.createElement('button');
       redeemBtn.className = "btn-3d-glass";
@@ -173,8 +197,20 @@
 
   // --- Event Handlers & Logic ---
 
+  // NEW: Show success modal
+  function showRedeemSuccessModal(reward) {
+    const modal = document.getElementById('redeem-success-modal');
+    document.getElementById('redeem-success-img').src = reward.image_url || config.logo;
+    document.getElementById('redeem-success-name').textContent = reward.product_name;
+    // The delivery text is now part of the HTML
+    modal.classList.add('show');
+    
+    document.getElementById('redeem-success-close').onclick = () => {
+      modal.classList.remove('show');
+    };
+  }
+
   async function handleRedeemClick(reward, button) {
-    // playSfx(sfxRedeem); // REMOVED
     button.textContent = "Checking...";
     button.disabled = true;
 
@@ -212,6 +248,22 @@
 
       button.textContent = "Redeemed!";
       
+      // SHOW SUCCESS MODAL
+      showRedeemSuccessModal(reward);
+
+      // SEND WEBENGAGE EVENT
+      if (typeof webengage !== "undefined") {
+        webengage.track('pb_reward_redeemed', {
+          email: userEmail,
+          customer_name: customerName || userEmail.split('@')[0],
+          product_name: reward.product_name,
+          product_sku: reward.sku,
+          product_image_url: reward.image_url,
+          product_price: reward.price,
+          tier: reward.tier
+        });
+      }
+      
     } catch (err) {
       console.error("Redemption failed:", err.message);
       if (button.textContent !== "Out of Stock") {
@@ -227,7 +279,7 @@
     const cardNameEl = document.getElementById('gallery-card-name');
     const openBtn = document.getElementById('open-gallery');
     
-    // This will now work because the audio error is gone.
+    // This will now work
     if (!modal || !cardImg || !cardNameEl || !openBtn) {
         console.error("Gallery modal elements missing!");
         return;
@@ -294,20 +346,34 @@
     if (userIsOverride) {
       pbCashAmount = 40;
     } else {
-      let orderData = await fetch('/.netlify/functions/magento-fetch', {
-        method: "POST", body: JSON.stringify({ email: userEmail }), headers: { 'Content-Type': 'application/json' }
-      }).then(res => res.json());
-      
-      if (orderData && orderData.success && orderData.order.items) {
-         let { data: prods } = await supabase.from('products_ordered')
-           .select('p_code, product_price')
-           .in('p_code', orderData.order.items.map(i => i.sku));
-           
-         if (prods) {
-           pbCashAmount = window.calculatePbCash(prods);
-         }
-      } else {
-        console.warn("Could not get order data for PB cash calc:", (orderData && orderData.error) || "No order data");
+      let orderData;
+      try {
+        orderData = await fetch('/.netlify/functions/magento-fetch', {
+          method: "POST", body: JSON.stringify({ email: userEmail }), headers: { 'Content-Type': 'application/json' }
+        }).then(res => res.json());
+
+        if (orderData && orderData.success) {
+          if(orderData.customer_name) {
+            customerName = orderData.customer_name;
+            if (typeof webengage !== "undefined") {
+              webengage.user.setAttribute('we_customer_name', customerName);
+            }
+          }
+
+          if (orderData.order.items) {
+            let { data: prods } = await supabase.from('products_ordered')
+              .select('p_code, product_price')
+              .in('p_code', orderData.order.items.map(i => i.sku));
+              
+            if (prods) {
+              pbCashAmount = window.calculatePbCash(prods);
+            }
+          }
+        } else {
+          console.warn("Could not get order data for PB cash calc:", (orderData && orderData.error) || "No order data");
+        }
+      } catch (err) {
+        console.error("Failed to fetch order for PB cash:", err);
       }
     }
     
@@ -324,7 +390,6 @@
     }
     
     claimBtn.onclick = async function() {
-      // playSfx(sfxPbCash); // REMOVED
       claimBtn.disabled = true;
       claimBtn.textContent = "Claiming...";
       
@@ -344,6 +409,14 @@
         showBtn.textContent = "PB Cash Claimed";
         showBtn.disabled = true;
         showBtn.style.opacity = 0.7;
+
+        if (typeof webengage !== "undefined") {
+          webengage.track('pb_cash_redeemed', {
+            email: userEmail,
+            customer_name: customerName || userEmail.split('@')[0],
+            amount: pbCashAmount
+          });
+        }
       }
     }
     
@@ -386,18 +459,21 @@
     mainTier =  (cardCount === 1) ? '1'
             : (cardCount >= 2 && cardCount <= 4) ? '2-4'
             : (cardCount >= 5 && cardCount <= 6) ? '5-6'
-            : (cardCount === 7) ? '7' : '1';
+            : (cardCount >= 7) ? '7' : '1';
     
     console.log(`User tier: ${mainTier} (${cardCount} cards)`);
 
     // 3. Render all UI components
-    renderCardSlider(userCards); // NEW
+    renderCardSlider(userCards);
     renderRockSlider(cardCount);
     setupGalleryModal(); // This will now work
     
-    await renderRewardGrid();
-    await renderLeaderboard();
-    await setupPbCashModal();
+    // Run all async renders
+    await Promise.all([
+      renderRewardGrid(),
+      renderLeaderboard(),
+      setupPbCashModal() // This fetches customerName
+    ]);
     
     renderShopMoreButton();
 
