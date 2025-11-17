@@ -8,16 +8,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
   
-  <!-- App Config: Add your public keys here -->
+
   <script>
     window.APP_CONFIG = {
       SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
-      SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpemZ1ZHh4bXFvaGxsbGlkY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODM2NjYsImV4cCI6MjA3ODc1OTY2Nn0._VzTpjPudZ9kyq-cHKR-0xJP8rix7pgntjL2Acc3hY0"
-      // WEBENGAGE_LICENSE_CODE REMOVED
+      SUPABASE_KEY: "eyJhbGciOiJIJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpemZ1ZHh4bXFvaGxsbGlkY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODM2NjYsImV4cCI6MjA3ODc1OTY2Nn0._VzTpjPudZ9kyq-cHKR-0xJP8rix7pgntjL2Acc3hY0"
+
     };
   </script>
   
-  <!-- Webengage Integration REMOVED -->
+
 
 </head>
 <body>
@@ -30,18 +30,35 @@
   <img src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png" alt="PB Days" class="pb-logo" />
 
   <div id="reveal-stage">
-    <!-- NEW: Loading Message -->
-    <div id="loading-message" class="loading-container">
+    
+
+    <div id="play-modal" style="display: none;">
+      <div class="pb-cash-text">COLLECT YOUR CARDS</div>
+      <button class="btn-3d-glass" id="play-btn">PLAY</button>
+    </div>
+
+
+    <div id="loading-message" class="loading-container" style="display: none;">
       <div class="pb-cash-text">Thank You For Your Order!</div>
       <div class="loading-subtext" id="loading-subtext">Loading Assets...</div>
       <div class="spinner"></div>
     </div>
-    <!-- JS will fill this area after loading -->
+
   </div>
 
   <button class="btn-3d-glass" id="reveal-redeem-btn" style="display:none; opacity: 0; transition: opacity 0.5s;">
     Redeem Cards
   </button>
+
+  <div class="modal-bg show" id="intro-modal">
+    <div class="modal-fg">
+      <div class="pb-cash-text">Welcome, Collector!</div>
+      <div class="redeem-success-delivery" style="font-size: 1rem; color: #eee;">
+        Your new PB Days Cards are ready.
+      </div>
+      <button class="btn-3d-glass" id="intro-play-btn" style="font-size: 1.3rem; margin-top: 1em;">Click to Play</button>
+    </div>
+  </div>
 
   <!-- App scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
