@@ -4,32 +4,46 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>PB Days Rewards & Redemption</title>
-  <!-- FIX: Added favicon to stop 404 error -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👑</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
+
+  <!-- Environment config -->
+  <script>
+    // This must be defined *before* the webengage script
+    window.ENV = {
+      SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
+      SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpemZ1ZHh4bXFvaGxsbGlkY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODM2NjYsImV4cCI6MjA3ODc1OTY2Nn0._VzTpjPudZ9kyq-cHKR-0xJP8rix7pgntjL2Acc3hY0",
+      WEBENGAGE_LICENSE_CODE: "ENV.WEBENGAGE_LICENSE_CODE" 
+    };
+  </script>
+
+  <!-- Webengage Integration -->
+  <script>
+    var webengage;
+    !function(w,e,b,n,g){if(!w[n]){w[n]={};var t=w[n].q=w[n].q||[];w[n].config=g||{};
+    var f=['track','login','setAttribute'];for(var i=0;i<f.length;i++)w[n][f[i]]=function(f){
+    return function(){var a=[].slice.call(arguments);a.unshift(f);t.push(a)}}(f[i]);
+    var s=e.createElement(b);s.async=1;s.src='https://widgets.webengage.com/js/webengage-min-v-8.0.js';
+    var r=e.getElementsByTagName(b)[0];r.parentNode.insertBefore(s,r)
+    }}(window,document,'script','webengage', {licenseCode: window.ENV.WEBENGAGE_LICENSE_CODE});
+  </script>
 </head>
 <body>
   
-  <!-- Mute Button (REMOVED) -->
-
-  <!-- Starfield Background -->
   <div class="stars">
     <div class="star"></div><div class="star"></div><div class="star"></div>
-    <!-- ... more stars ... -->
     <div class="star"></div><div class="star"></div><div class="star"></div>
   </div>
 
   <img src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png" alt="PB Days" class="pb-logo" />
 
-  <!-- NEW: Auto-scrolling Card Slider -->
   <div id="card-slider-container" class="card-slider-container" style="display:none;">
     <div class="card-slider-track" id="card-slider-track">
       <!-- JS will fill this with earned cards -->
     </div>
   </div>
 
-  <!-- Progress bar -->
   <div id="slider-bar-row">
     <div class="coc-progress-bar">
       <div class="coc-progress-inner" id="coc-progress-inner"></div>
@@ -42,15 +56,16 @@
     <button class="btn-3d-glass" id="open-gallery">View All My Cards</button>
   </div>
 
-  <!-- PB Cash CTA -->
   <div class="button-container" style="margin-top: 1.5em;">
     <button class="btn-3d-glass" id="show-pb-cash" style="display:none; background: linear-gradient(145deg,#fdd835 50%,#fff59d 100%); color: #3f227b;">
       Redeem PB CASH
     </button>
   </div>
 
-  <div class="mini-title" style="color:#fedc07;">Rewards</div>
-  <div id="reward-section" class="reward-grid"></div>
+  <div class="mini-title" style="color:#fedc07;">Your Rewards</div>
+  <div id="reward-section" class="reward-grid">
+    <!-- JS will fill this area -->
+  </div>
   
   <div class="mini-title" style="margin-top:2.2em;">Leaderboard</div>
   <div id="leaderboard" class="leaderboard-container"></div>
@@ -62,17 +77,13 @@
     <div class="modal-fg gallery-modal-content">
       
       <button id="gallery-left" class="gallery-arrow-btn">
-        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256">
-          <path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"></path>
-        </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"></path></svg>
       </button>
       
       <img id="gallery-card-img" src="" alt="card" class="gallery-card-img" />
       
       <button id="gallery-right" class="gallery-arrow-btn">
-        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256">
-          <path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"></path>
-        </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"></path></svg>
       </button>
 
       <div id="gallery-card-name" class="gallery-card-name"></div>
@@ -90,15 +101,18 @@
     </div>
   </div>
 
-  <!-- Audio elements (REMOVED) -->
-
-  <!-- Environment config -->
-  <script>
-    window.ENV = {
-      SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
-      SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpemZ1ZHh4bXFvaGxsbGlkY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODM2NjYsImV4cCI6MjA3ODc1OTY2Nn0._VzTpjPudZ9kyq-cHKR-0xJP8rix7pgntjL2Acc3hY0"
-    };
-  </script>
+  <!-- NEW: Redeem Success Modal -->
+  <div class="modal-bg" id="redeem-success-modal" style="display:none;">
+    <div class="modal-fg">
+      <div class="redeem-success-title">Reward Claimed!</div>
+      <img id="redeem-success-img" src="" alt="product" class="redeem-success-img" />
+      <div id="redeem-success-name" class="redeem-success-name"></div>
+      <div id="redeem-success-delivery" class="redeem-success-delivery">
+        Your product will be sent out once the order is delivered.
+      </div>
+      <button class="btn-3d-glass btn-close" id="redeem-success-close">Awesome!</button>
+    </div>
+  </div>
   
   <!-- App scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
