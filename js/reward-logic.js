@@ -18,18 +18,21 @@ async function getLiveRewardsByTier(tier) {
   return data;
 }
 
-// Given a customer's SKUs, assign cards via segment_code mapping
+// **LOGIC CHANGE: Reverted to UNIQUE cards per order**
 async function getCardsFromOrderSkus(p_codes) {
   // FIX: Check for the global client instance
   if (!window.supabaseClient) {
     console.error("Supabase client not initialized in getCardsFromOrderSkus");
     return [];
   }
+  
+  // 1. Get products from the order
   // FIX: Use the global client
   let { data: prods, error: prodErr } = await window.supabaseClient
     .from('products_ordered')
     .select('p_code,segment_code,product_price')
     .in('p_code', p_codes);
+  
   if (prodErr || !prods) {
     console.error("Error fetching products_ordered", prodErr);
     return [];
@@ -39,6 +42,7 @@ async function getCardsFromOrderSkus(p_codes) {
     return [];
   }
 
+  // 2. Get segment-to-card mapping
   // FIX: Use the global client
   let { data: segMappers, error: segErr } = await window.supabaseClient
     .from('segment_cards')
@@ -52,12 +56,16 @@ async function getCardsFromOrderSkus(p_codes) {
   let segMap = {};
   segMappers.forEach(row => segMap[row.segment_code] = row.card_name);
   
-  // Assign 1 card per unique segment_code in this order
+  // 3. Create a SET of UNIQUE cards (no duplicates per order)
   let cardSet = new Set();
   prods.forEach(p => {
     const card = segMap[p.segment_code];
-    if (card) cardSet.add(card);
+    if (card) {
+      cardSet.add(card);
+    }
   });
+  
+  // Returns an array like: ['Crown-Shaper', 'File-Forger']
   return Array.from(cardSet);
 }
 
