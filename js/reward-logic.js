@@ -2,8 +2,13 @@
 
 // Helper: fetch live eligible rewards for a user's card tier
 async function getLiveRewardsByTier(tier) {
-  if (!window.supabase) return [];
-  let { data, error } = await supabase
+  // FIX: Check for the global client instance
+  if (!window.supabaseClient) {
+    console.error("Supabase client not initialized in getLiveRewardsByTier");
+    return [];
+  }
+  // FIX: Use the global client
+  let { data, error } = await window.supabaseClient
     .from('reward_products')
     .select('sku,product_name,image_url,remainingqty,tier,price') // ADDED: price
     .eq('tier', tier)
@@ -15,8 +20,13 @@ async function getLiveRewardsByTier(tier) {
 
 // Given a customer's SKUs, assign cards via segment_code mapping
 async function getCardsFromOrderSkus(p_codes) {
-  if (!window.supabase) return [];
-  let { data: prods, error: prodErr } = await supabase
+  // FIX: Check for the global client instance
+  if (!window.supabaseClient) {
+    console.error("Supabase client not initialized in getCardsFromOrderSkus");
+    return [];
+  }
+  // FIX: Use the global client
+  let { data: prods, error: prodErr } = await window.supabaseClient
     .from('products_ordered')
     .select('p_code,segment_code,product_price')
     .in('p_code', p_codes);
@@ -29,7 +39,8 @@ async function getCardsFromOrderSkus(p_codes) {
     return [];
   }
 
-  let { data: segMappers, error: segErr } = await supabase
+  // FIX: Use the global client
+  let { data: segMappers, error: segErr } = await window.supabaseClient
     .from('segment_cards')
     .select('segment_code,card_name');
   
