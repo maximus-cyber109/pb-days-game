@@ -8,26 +8,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
   
-  <!-- Environment config -->
+  <!-- App Config: Add your public keys here -->
   <script>
-    // This must be defined *before* the webengage script
-    window.ENV = {
+    window.APP_CONFIG = {
       SUPABASE_URL: "https://bizfudxxmqohlllidcgj.supabase.co",
-      SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpemZ1ZHh4bXFvaGxsbGlkY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODM2NjYsImV4cCI6MjA3ODc1OTY2Nn0._VzTpjPudZ9kyq-cHKR-0xJP8rix7pgntjL2Acc3hY0",
-      WEBENGAGE_LICENSE_CODE: "ENV.WEBENGAGE_LICENSE_CODE"
+      SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpemZ1ZHh4bXFvaGxsbGlkY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODM2NjYsImV4cCI6MjA3ODc1OTY2Nn0._VzTpjPudZ9kyq-cHKR-0xJP8rix7pgntjL2Acc3hY0"
     };
   </script>
   
-  <!-- Webengage Integration -->
-  <script>
-    var webengage;
-    !function(w,e,b,n,g){if(!w[n]){w[n]={};var t=w[n].q=w[n].q||[];w[n].config=g||{};
-    var f=['track','login','setAttribute'];for(var i=0;i<f.length;i++)w[n][f[i]]=function(f){
-    return function(){var a=[].slice.call(arguments);a.unshift(f);t.push(a)}}(f[i]);
-    var s=e.createElement(b);s.async=1;s.src='https://widgets.webengage.com/js/webengage-min-v-8.0.js';
-    var r=e.getElementsByTagName(b)[0];r.parentNode.insertBefore(s,r)
-    }}(window,document,'script','webengage', {licenseCode: window.ENV.WEBENGAGE_LICENSE_CODE});
-  </script>
 </head>
 <body>
   
