@@ -51,7 +51,7 @@ exports.handler = async (event, context) => {
   // Init Supabase client
   const supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY // <-- ★★★ THIS IS THE FIX ★★★
+    process.env.SUPABASE_SERVICE_KEY // Using Service Key for backend logic
   );
 
   try {
@@ -96,8 +96,10 @@ exports.handler = async (event, context) => {
       console.error(`CRITICAL: Failed to update stock for ${reward.sku}`);
     }
       
-    // 4. Send Webengage event
-    await sendWebengageEvent('pb_reward_redeemed', {
+    // 4. Send Webengage event (NO AWAIT)
+    // This is the fix: removing 'await' lets the function finish
+    // without waiting for the Webengage API, preventing a timeout.
+    sendWebengageEvent('pb_reward_redeemed', { // ★★★ THIS IS THE FIX ★★★
       email: email,
       reward_sku: reward.sku,
       reward_name: reward.product_name,
