@@ -1,7 +1,7 @@
-const axios = require('axios'); // Still needed for the main handler, but not helper
+const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
 
-// --- Webengage Helper Function (MODIFIED) ---
+// --- Webengage Helper Function (using fetch) ---
 async function sendWebengageEvent(eventName, data) {
   const licenseCode = process.env.WEBENGAGE_LICENSE_CODE;
   const apiKey = process.env.WEBENGAGE_API_KEY;
@@ -21,7 +21,6 @@ async function sendWebengageEvent(eventName, data) {
       eventData: data
     };
     
-    // ★★★ THIS IS THE FIX: Using fetch() like your working example ★★★
     const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -46,7 +45,6 @@ async function sendWebengageEvent(eventName, data) {
 // --- End Webengage Helper ---
 
 // --- Main Handler ---
-// (This part is unchanged and correct)
 exports.handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -56,38 +54,51 @@ exports.handler = async (event, context) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
+
+  // ★★★ UPDATED: Now receiving customerName from frontend ★★★
   const { email, customerName, orderIdUsed, amount } = JSON.parse(event.body);
+
   if (!email || !orderIdUsed || !amount) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing email, order, or amount' }) };
   }
+  
+  // Init Supabase client
   const supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
+    process.env.SUPABASE_SERVICE_KEY // Using Service Key for backend logic
   );
+
   try {
+    // 1. Log the PB Cash claim
     let { error } = await supabase.from('pb_cash').insert({ 
       customer_email: email, 
       order_id_used: orderIdUsed,
       amount: amount, 
       redeemed_at: new Date().toISOString() 
     });
+    
     if (error) {
-      if (error.code === '23505') {
+      if (error.code === '23505') { // Unique constraint violation
           throw new Error("You have already claimed a reward.");
       }
       throw error;
     }
+    
+    // 2. Send Webengage event (NO AWAIT)
     sendWebengageEvent('pb_cash_redeemed', { 
       email: email,
       amount: amount,
       order_id_used: orderIdUsed,
-      customer_name: customerName
+      customer_name: customerName // ★★★ Added this data to the event
     });
+
+    // 3. Success
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({ success: true, message: 'PB Cash redeemed!' })
     };
+
   } catch (err) {
     console.error("PB Cash claim error:", err.message);
     return {
