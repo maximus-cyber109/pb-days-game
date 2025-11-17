@@ -1,7 +1,8 @@
 // app-redeem.js
 (async function() {
-  'use strict';
+  'useT strict';
 
+  // --- CONFIG & GLOBAL VARS ---
   const config = window.CR_CONFIG;
   if (!config) {
     console.error("CR_CONFIG not loaded!");
@@ -12,16 +13,21 @@
   const ALL_CARDS = Object.keys(CARD_IMAGES); 
   const TOTAL_CARDS_TO_COLLECT = 7; 
 
-  let userEmail = new URLSearchParams(location.search).get('email');
+  const urlParams = new URLSearchParams(location.search);
+  let userEmail = urlParams.get('email');
+  // OrderId is REMOVED. Redemption is per-customer.
+  
   let userIsOverride = false;
   let overrideInfo = null;
-  let userCards = []; 
-  let mainTier = "1";
-  let customerName = ""; // For Webengage
-
-  // --- Webengage Init REMOVED ---
   
-  // --- Utility ---
+  // This will store the *unique* cards the user has *ever* earned
+  let uniqueEarnedCards = [];
+  
+  let mainTier = "1";
+  let customerName = "";
+  let lastOrderId = 'N/A'; // For logging PB Cash claims
+
+  // --- UTILITY ---
   function getOverrideTier(email) {
     let match = (email || '').match(/-ovrmaaz(\d(?:-\d)?)/);
     if (match) {
@@ -34,25 +40,27 @@
     return null;
   }
   
-  // --- UI Rendering ---
+  function getTierFromCount(count) {
+    return (count === 1) ? '1'
+         : (count >= 2 && count <= 4) ? '2-4'
+         : (count >= 5 && count <= 6) ? '5-6'
+         : (count >= 7) ? '7' : '1';
+  }
 
-  // !!!!! FIX: RE-ADDED THE MISSING renderRockSlider FUNCTION !!!!!
+  // --- UI RENDERING ---
   function renderRockSlider(count) {
     const rocksContainer = document.getElementById('slider-rocks');
     const innerBar = document.getElementById('coc-progress-inner');
     const textEl = document.getElementById('slider-text');
-    
     if (!rocksContainer || !innerBar || !textEl) {
         console.error("Progress bar elements not found!");
         return;
     }
-
     let rocksHtml = "";
     for (let i = 0; i < TOTAL_CARDS_TO_COLLECT; i++) {
       rocksHtml += `<span class="coc-progress-rock${i < count ? " earned" : ""}"></span>`;
     }
     rocksContainer.innerHTML = rocksHtml;
-    
     const percentage = (count / TOTAL_CARDS_TO_COLLECT) * 100;
     innerBar.style.width = `${percentage}%`;
     textEl.innerText = `${count}/${TOTAL_CARDS_TO_COLLECT}`;
@@ -67,112 +75,94 @@
       container.style.display = 'none';
       return;
     }
-
     container.style.display = 'block';
-    
     let cardsHtml = '';
     let cardCount = 0;
-    // Create a long track for smooth scrolling
-    while (cardCount < 20 || cardsHtml.length < 2000) { // Ensure it's long enough
+    // Loop until the track is very long for a smooth scroll
+    while (cardCount < 20 || cardsHtml.length < 2000) {
         for (const cardName of earnedCards) {
             cardsHtml += `<img src="${CARD_IMAGES[cardName]}" alt="${cardName}" class="slider-card-img">`;
             cardCount++;
         }
-        if (earnedCards.length === 0) break; 
+        if (earnedCards.length === 0) break; // Safety break
     }
-    
     track.innerHTML = cardsHtml + cardsHtml; // Duplicate track for seamless loop
   }
 
-  // FIX: Restored the missing renderRewardGrid function
   async function renderRewardGrid() {
     const rewardSection = document.getElementById('reward-section');
     if (!rewardSection) return;
     
-    rewardSection.innerHTML = "";
+    rewardSection.innerHTML = ""; // Clear it
     
-    // NEW: Psychological Trigger for Tier 1
     if (mainTier === '1') {
+      // User has 1 card, show "Unlock More" prompt
       rewardSection.innerHTML = `<div class="reward-tier1-prompt">
         You're just one step away!<br>
         <span style="color:#fedc07; font-size: 1.2em;">Unlock 2+ Cards</span><br>
         to claim your first amazing rewards!
       </div>`;
-      return; // Stop here for Tier 1
-    }
-    
-    const rewards = await window.getLiveRewardsByTier(mainTier);
-    
-    if (!rewards || rewards.length === 0) {
-      rewardSection.innerHTML = `<p class="reward-tier1-prompt" style="font-size: 1rem;">
-        No rewards are active for this tier right now.
-        <br>Check back soon!
-      </p>`;
-      return;
-    }
-    
-    // FIX: This code was moved from renderCardSlider
-    let { data: redeemedSKUsData } = await window.supabaseClient.from('rewards_redeemed')
-        .select('sku')
-        .eq('email', userEmail);
-    const redeemedSKUs = redeemedSKUsData ? redeemedSKUsData.map(r => r.sku) : [];
-    
-    for (let reward of rewards) {
-      let c = document.createElement('div');
-      c.className = "product-card glow";
-      
-      let img = document.createElement('img');
-      img.className = "product-img";
-      img.src = reward.image_url || config.logo;
-      img.alt = reward.product_name;
-      c.appendChild(img);
-      
-      let title = document.createElement('div');
-      title.className = "product-name";
-      title.textContent = reward.product_name;
-      c.appendChild(title);
-      
-      let priceEl = document.createElement('div');
-      priceEl.className = "product-price";
-      priceEl.textContent = `₹${(reward.price || 0).toFixed(2)}`;
-      c.appendChild(priceEl);
-      
-      let redeemBtn = document.createElement('button');
-      redeemBtn.className = "btn-3d-glass";
-      
-      if (redeemedSKUs.includes(reward.sku)) {
-        redeemBtn.textContent = "Redeemed";
-        redeemBtn.disabled = true;
-      } else if (reward.remainingqty <= 0) {
-        redeemBtn.textContent = "Out of Stock";
-        redeemBtn.disabled = true;
-      } else {
-        redeemBtn.textContent = "Redeem";
-        redeemBtn.disabled = false;
-      }
-      
-      redeemBtn.onclick = () => handleRedeemClick(reward, redeemBtn);
-      c.appendChild(redeemBtn);
-      rewardSection.appendChild(c);
+      // Don't return, user might be eligible for PB Cash
+    } else {
+        // User has 2+ cards, fetch rewards for their tier
+        const rewards = await window.getLiveRewardsByTier(mainTier);
+        if (!rewards || rewards.length === 0) {
+          rewardSection.innerHTML = `<p class="reward-tier1-prompt" style="font-size: 1rem;">
+            No rewards are active for your tier right now.
+            <br>Check back soon!
+          </p>`;
+        } else {
+          for (let reward of rewards) {
+            let c = document.createElement('div');
+            c.className = "product-card glow";
+            
+            let img = document.createElement('img');
+            img.className = "product-img";
+            img.src = reward.image_url || config.logo;
+            img.alt = reward.product_name;
+            c.appendChild(img);
+            
+            let title = document.createElement('div');
+            title.className = "product-name";
+            title.textContent = reward.product_name;
+            c.appendChild(title);
+            
+            let priceEl = document.createElement('div');
+            priceEl.className = "product-price";
+            priceEl.textContent = `₹${(reward.price || 0).toFixed(2)}`;
+            c.appendChild(priceEl);
+            
+            let redeemBtn = document.createElement('button');
+            redeemBtn.className = "btn-3d-glass";
+            
+            if (reward.remainingqty <= 0) {
+              redeemBtn.textContent = "Out of Stock";
+              redeemBtn.disabled = true;
+            } else {
+              redeemBtn.textContent = "Redeem";
+              redeemBtn.disabled = false;
+            }
+            
+            redeemBtn.onclick = () => handleRedeemClick(reward, redeemBtn);
+            c.appendChild(redeemBtn);
+            rewardSection.appendChild(c);
+          }
+        }
     }
   }
   
   async function renderLeaderboard() {
     const lbContainer = document.getElementById('leaderboard');
     if (!lbContainer) return;
-    
-    // FIX: Use the global client
     let { data: leaders, error } = await window.supabaseClient.from('customer_stats')
       .select('customer_email,customer_name,unique_cards')
       .order('unique_cards', { ascending: false })
       .limit(10);
-      
     if (error) {
       console.error("Leaderboard error:", error);
       lbContainer.innerHTML = "<p>Leaderboard loading failed.</p>";
       return;
     }
-
     let lbHtml = (leaders.map((l, i) => `
       <div class="leaderboard-row">
         <span class="leaderboard-rank ${i === 0 ? 'first' : ''}">${i === 0 ? "👑" : i + 1}</span>
@@ -180,45 +170,30 @@
         <span class="leaderboard-score">${l.unique_cards || 0}</span>
       </div>
     `).join(""));
-    
     lbContainer.innerHTML = lbHtml;
   }
   
-  function renderShopMoreButton() {
-    const leaderboardEl = document.getElementById("leaderboard");
-    if (!leaderboardEl) return;
-    
-    const shopMoreBtn = document.createElement('a');
-    shopMoreBtn.href = "https://pinkblue.in";
-    shopMoreBtn.className = "btn-3d-glass shop-more-btn";
-    shopMoreBtn.textContent = "Shop More";
-    shopMoreBtn.target = "_blank";
-    shopMoreBtn.rel = "noopener noreferrer";
-    
-    leaderboardEl.parentNode.insertBefore(shopMoreBtn, leaderboardEl.nextSibling);
-  }
-
   // --- Event Handlers & Logic ---
 
-  // NEW: Show success modal
   function showRedeemSuccessModal(reward) {
     const modal = document.getElementById('redeem-success-modal');
     document.getElementById('redeem-success-img').src = reward.image_url || config.logo;
     document.getElementById('redeem-success-name').textContent = reward.product_name;
-    // The delivery text is now part of the HTML
     modal.classList.add('show');
-    
     document.getElementById('redeem-success-close').onclick = () => {
       modal.classList.remove('show');
+      // Reload the page to show the "already redeemed" message
+      location.reload();
     };
   }
 
+  // **LOGIC CHANGE: Redeems against CUSTOMER_EMAIL**
   async function handleRedeemClick(reward, button) {
     button.textContent = "Checking...";
     button.disabled = true;
 
     try {
-      // FIX: Use the global client
+      // 1. Check stock
       let { data: product, error: fetchError } = await window.supabaseClient
         .from('reward_products')
         .select('remainingqty')
@@ -230,45 +205,36 @@
         throw new Error("Reward is out of stock.");
       }
 
+      // 2. Log the redemption (Uses UNIQUE customer_email constraint)
+      let { error: logError } = await window.supabaseClient
+        .from('rewards_redeemed')
+        .insert({
+          customer_email: userEmail,
+          reward_sku: reward.sku,
+          reward_name: reward.product_name,
+          reward_tier: reward.tier
+        });
+        
+      if (logError) {
+          if (logError.code === '23505') { // Unique constraint violation
+              throw new Error("You have already claimed a reward.");
+          }
+          throw logError;
+      }
+      
+      // 3. Update stock (do this last)
       const newQty = product.remainingqty - 1;
-      // FIX: Use the global client
-      let { error: updateError } = await window.supabaseClient
+      await window.supabaseClient
         .from('reward_products')
         .update({ remainingqty: newQty })
         .eq('sku', reward.sku);
         
-      if (updateError) throw updateError;
-
-      // FIX: Use the global client
-      let { error: logError } = await window.supabaseClient
-        .from('rewards_redeemed')
-        .insert({
-          email: userEmail,
-          sku: reward.sku,
-          product_name: reward.product_name,
-          tier: reward.tier,
-          reward_time: new Date().toISOString()
-        });
-        
-      if (logError) throw logError;
-
       button.textContent = "Redeemed!";
-      
-      // SHOW SUCCESS MODAL
       showRedeemSuccessModal(reward);
-
-      // SEND WEBENGAGE EVENT
-      if (typeof webengage !== "undefined") {
-        // webengage.track('pb_reward_redeemed', { ... }); REMOVED
-        console.log("Webengage event removed. Would have tracked reward:", reward.product_name);
-      }
       
     } catch (err) {
       console.error("Redemption failed:", err.message);
-      if (button.textContent !== "Out of Stock") {
-        button.textContent = "Error! Try Again";
-        button.disabled = false;
-      }
+      button.textContent = err.message.includes("already claimed") ? "Already Claimed" : "Error! Try Again";
     }
   }
 
@@ -278,7 +244,6 @@
     const cardNameEl = document.getElementById('gallery-card-name');
     const openBtn = document.getElementById('open-gallery');
     
-    // This will now work
     if (!modal || !cardImg || !cardNameEl || !openBtn) {
         console.error("Gallery modal elements missing!");
         return;
@@ -287,29 +252,31 @@
     let galleryIdx = 0;
 
     function updateGallery(idx) {
-      let cardName = ALL_CARDS[idx];
+      if (uniqueEarnedCards.length === 0) {
+          cardNameEl.innerText = "No Cards Yet";
+          cardImg.src = config.logo;
+          return;
+      }
+        
+      let cardName = uniqueEarnedCards[idx];
       cardImg.src = CARD_IMAGES[cardName];
       cardNameEl.innerText = cardName.replace(/-/g, " ");
-      
-      if (userCards.includes(cardName)) {
-        cardImg.className = "gallery-card-img revealed";
-      } else {
-        cardImg.className = "gallery-card-img locked";
-      }
+      cardImg.className = "gallery-card-img revealed";
     }
 
     openBtn.onclick = function() {
-      galleryIdx = userCards.length ? ALL_CARDS.indexOf(userCards[0]) : 0;
-      if (galleryIdx === -1) galleryIdx = 0;
+      galleryIdx = 0;
       updateGallery(galleryIdx);
       modal.classList.add('show');
     }
     document.getElementById('gallery-left').onclick = function() {
-      galleryIdx = (galleryIdx + ALL_CARDS.length - 1) % ALL_CARDS.length;
+      if (uniqueEarnedCards.length === 0) return;
+      galleryIdx = (galleryIdx + uniqueEarnedCards.length - 1) % uniqueEarnedCards.length;
       updateGallery(galleryIdx);
     }
     document.getElementById('gallery-right').onclick = function() {
-      galleryIdx = (galleryIdx + 1) % ALL_CARDS.length;
+      if (uniqueEarnedCards.length === 0) return;
+      galleryIdx = (galleryIdx + 1) % uniqueEarnedCards.length;
       updateGallery(galleryIdx);
     }
     document.getElementById('gallery-close').onclick = function() {
@@ -317,49 +284,35 @@
     }
   }
   
+  // **LOGIC CHANGE: Checks for "one-shot" redemption**
   async function setupPbCashModal() {
     const showBtn = document.getElementById('show-pb-cash');
     const modal = document.getElementById('pb-cash-modal');
     const textEl = document.getElementById('pb-cash-text');
     const claimBtn = document.getElementById('pb-cash-claim');
     
-    let pbCashAmount = 0;
-    
+    // Only show PB Cash button if this user is Tier 1
     if (mainTier !== '1') {
       showBtn.style.display = 'none';
       return;
     }
     
-    // FIX: Use the global client
-    let { data: claimed, error } = await window.supabaseClient.from('pb_cash')
-      .select('id')
-      .eq('email', userEmail);
-      
-    if (claimed && claimed.length > 0) {
-      showBtn.textContent = "PB Cash Claimed";
-      showBtn.disabled = true;
-      showBtn.style.display = 'block';
-      showBtn.style.opacity = 0.7;
-      return;
-    }
+    let pbCashAmount = 0;
     
     if (userIsOverride) {
       pbCashAmount = 40;
     } else {
       let orderData;
       try {
+        // Fetch *this specific order's* details
         orderData = await fetch('/.netlify/functions/magento-fetch', {
-          method: "POST", body: JSON.stringify({ email: userEmail }), headers: { 'Content-Type': 'application/json' }
+          method: "POST", body: JSON.stringify({ email: userEmail, orderId: lastOrderId }), headers: { 'Content-Type': 'application/json' }
         }).then(res => res.json());
 
         if (orderData && orderData.success) {
-          if(orderData.customer_name) {
-            customerName = orderData.customer_name;
-            // webengage.user.setAttribute('we_customer_name', customerName); REMOVED
-          }
+          if(orderData.customer_name) customerName = orderData.customer_name;
 
           if (orderData.order.items) {
-            // FIX: Use the global client
             let { data: prods } = await window.supabaseClient.from('products_ordered')
               .select('p_code, product_price')
               .in('p_code', orderData.order.items.map(i => i.sku));
@@ -369,7 +322,7 @@
             }
           }
         } else {
-          console.warn("Could not get order data for PB cash calc:", (orderData && orderData.error) || "No order data");
+          console.warn("Could not get order data for PB cash calc:", (orderData && orderData.error));
         }
       } catch (err) {
         console.error("Failed to fetch order for PB cash:", err);
@@ -392,28 +345,26 @@
       claimBtn.disabled = true;
       claimBtn.textContent = "Claiming...";
       
-      // FIX: Use the global client
       let { error } = await window.supabaseClient.from('pb_cash').insert({ 
         email: userEmail, 
+        order_id_used: lastOrderId, // Log which order triggered this
         amount: pbCashAmount, 
-        reward_time: new Date().toISOString() 
+        redeemed_at: new Date().toISOString() 
       });
       
       if (error) {
-        console.error("PB Cash claim error:", error);
-        claimBtn.textContent = "Error! Try Again";
-        claimBtn.disabled = false;
+        if (error.code === '23505') { // Unique constraint violation
+            claimBtn.textContent = "Already Claimed";
+        } else {
+            console.error("PB Cash claim error:", error);
+            claimBtn.textContent = "Error! Try Again";
+            claimBtn.disabled = false;
+        }
       } else {
         claimBtn.textContent = "Claimed!";
         modal.classList.remove('show');
-        showBtn.textContent = "PB Cash Claimed";
-        showBtn.disabled = true;
-        showBtn.style.opacity = 0.7;
-
-        // webengage.track('pb_cash_redeemed', { ... }); REMOVED
-        if (typeof webengage !== "undefined") {
-          console.log("Webengage event removed. Would have tracked PB Cash:", pbCashAmount);
-        }
+        // Reload the page to show the "already redeemed" message
+        location.reload();
       }
     }
     
@@ -425,7 +376,7 @@
   // --- Main Execution ---
   async function mainRedeem() {
     if (!userEmail) {
-      document.body.innerHTML = `<div class="pb-cash-text" style="padding-top: 100px; text-align:center;">No email provided. Please go back to the reveal page.</div>`;
+      document.body.innerHTML = `<div class="pb-cash-text" style="padding-top: 100px; text-align:center;">No email provided. Go back and enter your email.</div>`;
       return;
     }
 
@@ -434,46 +385,75 @@
     overrideInfo = getOverrideTier(userEmail);
     userIsOverride = !!overrideInfo;
 
-    // 1. Fetch user's cards
+    // 1. Check for ANY existing redemption for this customer
+    if (!userIsOverride) {
+      const { data: existingRedemption, error: checkError } = await window.supabaseClient
+          .from('rewards_redeemed')
+          .select('reward_name')
+          .eq('customer_email', userEmail)
+          .single();
+          
+      const { data: existingCash, error: cashCheckError } = await window.supabaseClient
+          .from('pb_cash')
+          .select('amount')
+          .eq('customer_email', userEmail)
+          .single();
+
+      if (existingRedemption) {
+        document.getElementById('redemption-area').style.display = 'none';
+        const msgEl = document.getElementById('already-redeemed-area');
+        msgEl.innerHTML = `You have already claimed your one-time reward:<br><strong style="color:#fedc07; font-size: 1.2em;">${existingRedemption.reward_name}</strong>`;
+        msgEl.style.display = 'block';
+      } else if (existingCash) {
+        document.getElementById('redemption-area').style.display = 'none';
+        const msgEl = document.getElementById('already-redeemed-area');
+        msgEl.innerHTML = `You have already claimed your one-time reward:<br><strong style="color:#fedc07; font-size: 1.2em;">PB Cash ₹${existingCash.amount}</strong>`;
+        msgEl.style.display = 'block';
+      }
+    }
+
+    // 2. Fetch *all* user's earned cards
+    let allEarnedCards = [];
+    
     if (userIsOverride) {
-      userCards = ALL_CARDS.slice(0, overrideInfo.cardCount);
-    } else {
-      // FIX: Use the global client
-      let { data: earned, error } = await window.supabaseClient.from('cards_earned')
-        .select('card_name')
-        .eq('customer_email', userEmail);
+      for(let i = 0; i < overrideInfo.cardCount; i++) allEarnedCards.push(ALL_CARDS[i]);
+      if(overrideInfo.cardCount > 1) allEarnedCards.push(ALL_CARDS[0]); // Add duplicate for testing
       
-      if (error) {
-        console.error("Error fetching user cards:", error);
+    } else {
+      const { data: earnedData, error: earnedError } = await window.supabaseClient
+        .from('cards_earned')
+        .select('card_name, order_id')
+        .eq('customer_email', userEmail)
+        .order('earned_at', { ascending: false }); // Get newest first
+        
+      if (earnedError) {
+        console.error("Error fetching card data:", earnedError);
         return;
       }
-      userCards = [...new Set(earned.map(c => c.card_name))];
+      
+      allEarnedCards = earnedData.map(c => c.card_name);
+      if (earnedData.length > 0) {
+        lastOrderId = earnedData[0].order_id; // Get the most recent order ID for PB cash
+      }
     }
     
-    console.log("User owns cards:", userCards);
-
-    // 2. Determine user's tier
-    const cardCount = userCards.length;
-    mainTier =  (cardCount === 1) ? '1'
-            : (cardCount >= 2 && cardCount <= 4) ? '2-4'
-            : (cardCount >= 5 && cardCount <= 6) ? '5-6'
-            : (cardCount >= 7) ? '7' : '1';
+    // 3. Calculate *total unique* cards
+    uniqueEarnedCards = [...new Set(allEarnedCards)];
+    const uniqueCardCount = uniqueEarnedCards.length;
+    mainTier = getTierFromCount(uniqueCardCount);
     
-    console.log(`User tier: ${mainTier} (${cardCount} cards)`);
+    console.log(`User has ${uniqueCardCount} total unique cards. Tier: ${mainTier}`);
 
-    // 3. Render all UI components
-    renderCardSlider(userCards);
-    renderRockSlider(cardCount);
-    setupGalleryModal(); // This will now work
+    // 4. Render all UI components
+    renderCardSlider(uniqueEarnedCards);
+    renderRockSlider(uniqueCardCount); // Progress bar shows *total* tier
+    setupGalleryModal();
     
-    // Run all async renders
     await Promise.all([
       renderRewardGrid(),
       renderLeaderboard(),
-      setupPbCashModal() // This fetches customerName
+      setupPbCashModal()
     ]);
-    
-    renderShopMoreButton();
 
   } // end mainRedeem
 
