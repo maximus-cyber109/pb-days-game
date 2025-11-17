@@ -100,17 +100,26 @@ body {
 }
 .btn-3d-glass:hover, .btn-3d-glass:focus {
   transform: translateY(-2px);
-  /* ... (shadows) ... */
+  box-shadow: 
+    0 12px 20px rgba(63, 34, 123, 0.5),
+    inset 0 2px 2px rgba(255, 255, 255, 0.3),
+    inset 0 -2px 2px rgba(63, 34, 123, 0.5);
 }
 .btn-3d-glass:active {
   transform: translateY(1px);
-  /* ... (shadows) ... */
+  box-shadow: 
+    0 4px 8px rgba(63, 34, 123, 0.5),
+    inset 0 2px 2px rgba(255, 255, 255, 0.3),
+    inset 0 -2px 2px rgba(63, 34, 123, 0.5);
 }
 /* Close button variant */
 .btn-3d-glass.btn-close {
   background: linear-gradient(145deg, #555 50%, #999 100%);
   border-color: #aaa;
-  /* ... (shadows) ... */
+  box-shadow: 
+    0 8px 15px rgba(0, 0, 0, 0.2),
+    inset 0 2px 2px rgba(255, 255, 255, 0.2),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.3);
   margin-top: 0.5em;
 }
 /* "Shop More" button */
