@@ -3,10 +3,21 @@ const { createClient } = require('@supabase/supabase-js');
 
 // This function's *only* job is to look up DB data and send it to Webengage
 exports.handler = async (event, context) => {
+  // This is a fire-and-forget function, so we add CORS headers
+  // and handle OPTIONS pre-flight requests
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  };
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
+
   const { email, customerName } = JSON.parse(event.body);
 
   if (!email) {
-    return { statusCode: 400, body: 'Missing email' };
+    return { statusCode: 400, headers, body: 'Missing email' };
   }
 
   const supabase = createClient(
@@ -19,7 +30,7 @@ exports.handler = async (event, context) => {
 
   if (!licenseCode || !apiKey) {
     console.error('Webengage ENV not configured.');
-    return { statusCode: 500, body: 'Webengage ENV not configured' };
+    return { statusCode: 500, headers, body: 'Webengage ENV not configured' };
   }
 
   try {
@@ -45,7 +56,7 @@ exports.handler = async (event, context) => {
     const eventData = {
       email: email,
       customer_name: customerName,
-      total_unique_cards: stats.unique_cards,
+      total_unique_cards: stats ? stats.unique_cards : 0,
       all_cards_list: uniqueCardNames.join(', ')
     };
 
@@ -53,7 +64,7 @@ exports.handler = async (event, context) => {
     const apiUrl = `https://api.webengage.com/v1/accounts/${licenseCode}/events`;
     const payload = {
       userId: email,
-      eventName: 'pb_card_collection_status', // New, clearer event name
+      eventName: 'pb_card_collection_status',
       eventData: eventData
     };
 
@@ -62,14 +73,14 @@ exports.handler = async (event, context) => {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
-      timeout: 5000
+      timeout: 9000 // 9 second timeout
     });
 
     console.log(`Webengage event [pb_card_collection_status] sent for ${email}`);
-    return { statusCode: 202 }; // 202 Accepted (fire-and-forget)
+    return { statusCode: 202, headers }; // 202 Accepted (fire-and-forget)
 
   } catch (error) {
     console.error(`Webengage send-card-event failed for ${email}:`, error.message);
-    return { statusCode: 500, body: error.message };
+    return { statusCode: 500, headers, body: error.message };
   }
 };
