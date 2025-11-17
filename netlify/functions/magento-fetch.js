@@ -1,8 +1,8 @@
 const axios = require('axios');
 
-// This function's *only* job is to get order data.
-// NO Webengage, NO database logic.
-exports.handler = async (event, context) => {
+// --- NEW: Webengage Helper Function ---
+// This function sends events from the backend
+async function sendWebengageEvent(eventName, data) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -97,15 +97,15 @@ exports.handler = async (event, context) => {
 
     return {
       statusCode: 200,
-      headers,
-      body: JSON.stringify({ 
-        success: true, 
-        order: orderOut,
-        skus: skus,
-        customer_name: customer_name
-      })
-    };
-
+    await axios.post(apiUrl, payload, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      // CHANGED: Increased timeout to 9 seconds
+      timeout: 9000
+    });
+    console.log(`Webengage event [${eventName}] sent for ${data.email}`);
   } catch (error) {
     console.error('Error in magento-fetch:', error.message);
     let msg = error.response?.data?.message || error.message;
@@ -115,4 +115,8 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ success: false, error: msg }) 
     };
   }
-};
+}
+// --- End Webengage Helper ---
+
+
+exports.handler = async (event, context) => {
