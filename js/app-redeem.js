@@ -59,7 +59,37 @@
         if (earnedCards.length === 0) break; 
     }
     
-    // FIX: Use the global client
+    track.innerHTML = cardsHtml + cardsHtml; // Duplicate track for seamless loop
+  }
+
+  // FIX: Restored the missing renderRewardGrid function
+  async function renderRewardGrid() {
+    const rewardSection = document.getElementById('reward-section');
+    if (!rewardSection) return;
+    
+    rewardSection.innerHTML = "";
+    
+    // NEW: Psychological Trigger for Tier 1
+    if (mainTier === '1') {
+      rewardSection.innerHTML = `<div class="reward-tier1-prompt">
+        You're just one step away!<br>
+        <span style="color:#fedc07; font-size: 1.2em;">Unlock 2+ Cards</span><br>
+        to claim your first amazing rewards!
+      </div>`;
+      return; // Stop here for Tier 1
+    }
+    
+    const rewards = await window.getLiveRewardsByTier(mainTier);
+    
+    if (!rewards || rewards.length === 0) {
+      rewardSection.innerHTML = `<p class="reward-tier1-prompt" style="font-size: 1rem;">
+        No rewards are active for this tier right now.
+        <br>Check back soon!
+      </p>`;
+      return;
+    }
+    
+    // FIX: This code was moved from renderCardSlider
     let { data: redeemedSKUsData } = await window.supabaseClient.from('rewards_redeemed')
         .select('sku')
         .eq('email', userEmail);
