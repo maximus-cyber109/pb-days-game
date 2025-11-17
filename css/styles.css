@@ -227,7 +227,8 @@ body {
   opacity: 0.6;
 }
 .reveal-card-static.revealed {
-  opacity: 0; 
+  /* !! BUG FIX: Opacity was 0, changed to 1 !! */
+  opacity: 1; 
   transform: scale(0.5); 
   background: transparent;
   border-color: transparent;
@@ -575,6 +576,11 @@ body {
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
+/* Gallery Card Quantity REMOVED */
+.gallery-card-qty {
+  display: none;
+}
+
 /* 'Medieval' Transparent Arrow Buttons */
 .gallery-arrow-btn {
   position: absolute;
@@ -600,6 +606,9 @@ body {
 }
 #gallery-left { left: 5px; }
 #gallery-right { right: 5px; }
+
+/* History Modal Styles REMOVED */
+
 
 /* Responsive Adjustments */
 @media (max-width: 400px) {
