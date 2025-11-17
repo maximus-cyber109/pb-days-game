@@ -13,6 +13,12 @@
   const redeemBtn = document.getElementById('reveal-redeem-btn');
   const loadingMsg = document.getElementById('loading-message');
   const loadingSubtext = document.getElementById('loading-subtext');
+  // NEW: Play Modal
+  const playModal = document.getElementById('play-modal');
+  const playBtn = document.getElementById('play-btn');
+  // NEW: Intro Modal
+  const introModal = document.getElementById('intro-modal');
+  const introPlayBtn = document.getElementById('intro-play-btn');
   
   let userEmail = "";
   let userIsOverride = false;
@@ -23,7 +29,34 @@
   // --- Initialization ---
   initSupabase();
   if (emailCheck()) {
-    setTimeout(startRevealFlow, 80);
+    // Wait for user to click "Click to Play"
+    setupIntroModal();
+  }
+
+  // NEW: Setup Intro "Click to Play" Modal
+  function setupIntroModal() {
+    if (!introModal || !introPlayBtn) return;
+    introPlayBtn.onclick = () => {
+      introModal.classList.remove('show');
+      // Show the main "PLAY" button
+      playModal.style.display = 'block';
+      setupPlayButton();
+    }
+  }
+
+  // NEW: Setup Play Button
+  function setupPlayButton() {
+    if (!playBtn) return;
+    playBtn.onclick = () => {
+      // Animate out the play modal
+      playModal.classList.add('is-hiding');
+      
+      // Show the loading message
+      loadingMsg.style.display = 'block';
+
+      // Start the real flow
+      setTimeout(startRevealFlow, 400); // Start flow after animation
+    }
   }
 
   // --- Email & Auth ---
@@ -55,9 +88,19 @@
       e.preventDefault();
       userEmail = box.querySelector('#email-input').value.trim().toLowerCase();
       if (userEmail) {
+        // REMOVED Webengage Login
         box.classList.remove('show');
         setTimeout(() => box.remove(), 300);
-        startRevealFlow();
+        // User has entered email, show the play button
+        loadingMsg.style.display = 'none';
+        
+        // Hide intro modal if it's somehow still open
+        const intro = document.getElementById('intro-modal');
+        if (intro) intro.classList.remove('show');
+
+        // Show the play button
+        playModal.style.display = 'block';
+        setupPlayButton();
       }
     }
   }
@@ -151,12 +194,25 @@
         cardsToReveal = await window.getCardsFromOrderSkus(data.skus);
         console.log("Cards from segments (unique):", cardsToReveal);
 
+        // **WEBENGAGE EVENT REMOVED from frontend**
+        // It's now in magento-fetch.js
+
         if (!cardsToReveal.length) {
           throw new Error('No new cards associated with the segments in this order.');
         }
 
+        // Check which of these cards are *truly* new for the user
+        const { data: existingCardsData } = await window.supabaseClient
+          .from('cards_earned')
+          .select('card_name')
+          .eq('customer_email', userEmail)
+          .in('card_name', cardsToReveal);
+        
+        const existingCardNames = new Set(existingCardsData.map(c => c.card_name));
+        const newCardsToInsert = cardsToReveal.filter(cardName => !existingCardNames.has(cardName));
+
         // Insert only the new unique cards from this order
-        let cardsToInsert = cardsToReveal.map(cardName => ({
+        let cardsToInsert = newCardsToInsert.map(cardName => ({
             customer_email: userEmail,
             card_name: cardName,
             order_id: currentOrderId
@@ -168,6 +224,8 @@
                 .insert(cardsToInsert);
             if (insertError) throw insertError;
             console.log(`Inserted ${cardsToInsert.length} new cards into cards_earned.`);
+        } else {
+            console.log("No new unique cards to insert for this order.");
         }
 
         // Update leaderboard based on user's *total* unique card count
@@ -201,32 +259,12 @@
     try { await Promise.all(imagePromises); } catch (err) { console.error("Failed to preload images", err); }
     loadingMsg.style.display = 'none';
 
-    // 2. Build the 2-column grid
+    // 2. Build the grid (now single column)
     const grid = document.createElement('div');
     grid.className = "reveal-card-grid";
     
-    const numUniqueCards = cardsToReveal.length;
-    
-    if (numUniqueCards === 7) {
-      grid.classList.add('seven-cards');
-    }
-
-    // Show locked cards for slots 1-7
-    let otherCards = ALL_CARD_NAMES.filter(c => !cardsToReveal.includes(c));
-    let lockCount = 0;
-    if (numUniqueCards < 8) {
-        // This fills out the grid to be even, or 7 total
-        lockCount = numUniqueCards % 2 === 1 ? 1 : 0; // Add 1 if odd
-        if (numUniqueCards === 1) lockCount = 3; // Special case for 1 card
-    }
-    
-    let slots = [
-        ...cardsToReveal.map(name => ({ name, owned: true })),
-        ...new Array(lockCount).fill(0).map((_, i) => ({ 
-            name: otherCards[i % otherCards.length],
-            owned: false 
-        }))
-    ];
+    // Create slots for the cards just earned in this order
+    let slots = cardsToReveal.map(name => ({ name, owned: true }));
 
     for (const slot of slots) {
       let img = document.createElement('img');
@@ -235,8 +273,6 @@
       if (slot.owned) {
         img.classList.add('revealed');
         img.dataset.cardName = slot.name; 
-      } else {
-        img.classList.add('locked');
       }
       grid.appendChild(img);
     }
