@@ -19,13 +19,7 @@
   let mainTier = "1";
   let customerName = ""; // For Webengage
 
-  // --- Webengage Init ---
-  if (typeof webengage !== "undefined" && window.ENV.WEBENGAGE_LICENSE_CODE) {
-    webengage.init(window.ENV.WEBENGAGE_LICENSE_CODE);
-    if(userEmail) {
-      webengage.user.login(userEmail);
-    }
-  }
+  // --- Webengage Init REMOVED ---
   
   // --- Utility ---
   function getOverrideTier(email) {
@@ -253,15 +247,8 @@
 
       // SEND WEBENGAGE EVENT
       if (typeof webengage !== "undefined") {
-        webengage.track('pb_reward_redeemed', {
-          email: userEmail,
-          customer_name: customerName || userEmail.split('@')[0],
-          product_name: reward.product_name,
-          product_sku: reward.sku,
-          product_image_url: reward.image_url,
-          product_price: reward.price,
-          tier: reward.tier
-        });
+        // webengage.track('pb_reward_redeemed', { ... }); REMOVED
+        console.log("Webengage event removed. Would have tracked reward:", reward.product_name);
       }
       
     } catch (err) {
@@ -355,9 +342,7 @@
         if (orderData && orderData.success) {
           if(orderData.customer_name) {
             customerName = orderData.customer_name;
-            if (typeof webengage !== "undefined") {
-              webengage.user.setAttribute('we_customer_name', customerName);
-            }
+            // webengage.user.setAttribute('we_customer_name', customerName); REMOVED
           }
 
           if (orderData.order.items) {
@@ -410,12 +395,9 @@
         showBtn.disabled = true;
         showBtn.style.opacity = 0.7;
 
+        // webengage.track('pb_cash_redeemed', { ... }); REMOVED
         if (typeof webengage !== "undefined") {
-          webengage.track('pb_cash_redeemed', {
-            email: userEmail,
-            customer_name: customerName || userEmail.split('@')[0],
-            amount: pbCashAmount
-          });
+          console.log("Webengage event removed. Would have tracked PB Cash:", pbCashAmount);
         }
       }
     }
