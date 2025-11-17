@@ -7,7 +7,7 @@
     console.error("CR_CONFIG not loaded!");
     return;
   }
-
+  
   const CARD_IMAGES = config.cards;
   const stage = document.getElementById('reveal-stage');
   const redeemBtn = document.getElementById('reveal-redeem-btn');
@@ -18,8 +18,7 @@
   let userIsOverride = false;
   let overrideCards = [];
   const ALL_CARD_NAMES = Object.keys(CARD_IMAGES);
-
-  // --- Webengage Init REMOVED ---
+  let currentOrderId = 'N/A'; // Store the order ID for logging
 
   // --- Initialization ---
   initSupabase();
@@ -56,7 +55,6 @@
       e.preventDefault();
       userEmail = box.querySelector('#email-input').value.trim().toLowerCase();
       if (userEmail) {
-        // webengage.user.login(userEmail); REMOVED
         box.classList.remove('show');
         setTimeout(() => box.remove(), 300);
         startRevealFlow();
@@ -72,7 +70,6 @@
       return false;
     }
     userEmail = email.toLowerCase();
-    // webengage.user.login(userEmail); REMOVED
     return true;
   }
 
@@ -80,24 +77,21 @@
   async function updateLeaderboardStats(email, name) {
     if (userIsOverride) {
       console.log("Override user: Skipping leaderboard update.");
-      return; // Don't update leaderboard for test users
+      return;
     }
-
     try {
       // 1. Get ALL unique cards for this user
-      // FIX: Use the global client
       const { data, error } = await window.supabaseClient
         .from('cards_earned')
         .select('card_name', { count: 'exact', head: false }) // Use head: false
         .eq('customer_email', email);
-
+        
       if (error) throw error;
 
       const uniqueCards = [...new Set(data.map(c => c.card_name))];
       const uniqueCardCount = uniqueCards.length;
 
       // 2. Upsert (insert or update) the customer_stats table
-      // FIX: Use the global client
       const { error: upsertError } = await window.supabaseClient
         .from('customer_stats')
         .upsert(
@@ -110,9 +104,7 @@
         );
 
       if (upsertError) throw upsertError;
-      
-      console.log(`Leaderboard updated for ${email}: ${uniqueCardCount} cards`);
-
+      console.log(`Leaderboard updated for ${email}: ${uniqueCardCount} unique cards`);
     } catch (err) {
       console.error("Error updating leaderboard:", err);
     }
@@ -121,22 +113,20 @@
 
   // --- Main Card Reveal Logic ---
   async function startRevealFlow() {
-    if (!stage) {
-      console.error("#reveal-stage not found");
-      return;
-    }
+    if (!stage) return;
     
     loadingSubtext.textContent = "Fetching Your Cards...";
 
-    let revealCards = [];
-    let customer_name = userEmail.split('@')[0]; // default
-    let order_id = 'N/A'; // default
+    let cardsToReveal = []; // *Unique* cards from *this order*
+    let customer_name = userEmail.split('@')[0];
     let override = getOverrideTier(userEmail);
     userIsOverride = !!override;
 
     if (userIsOverride) {
       console.log("Using override:", override);
-      revealCards = ALL_CARD_NAMES.slice(0, override.numCards);
+      cardsToReveal = ALL_CARD_NAMES.slice(0, override.numCards);
+      currentOrderId = `TEST_${Date.now()}`;
+
     } else {
       console.log("Fetching cards for:", userEmail);
       try {
@@ -146,9 +136,7 @@
           headers: { 'Content-Type': 'application/json' }
         });
         
-        if (!res.ok) {
-          throw new Error(`Magento fetch failed: ${res.statusText}`);
-        }
+        if (!res.ok) throw new Error(`Magento fetch failed: ${res.statusText}`);
         
         let data = await res.json();
         if (!data.success || !data.order || !data.skus.length) {
@@ -156,53 +144,34 @@
         }
 
         console.log("Order SKUs:", data.skus);
-        customer_name = data.customer_name; // Get name
-        order_id = data.order.increment_id; // Get order ID
+        customer_name = data.customer_name;
+        currentOrderId = data.order.increment_id; // Set the current order ID
         
-        // Set customer name in Webengage REMOVED
-        
-        revealCards = await window.getCardsFromOrderSkus(data.skus);
-        console.log("Cards from segments:", revealCards);
+        // **LOGIC CHANGE: Get UNIQUE cards for this order**
+        cardsToReveal = await window.getCardsFromOrderSkus(data.skus);
+        console.log("Cards from segments (unique):", cardsToReveal);
 
-        if (!revealCards.length) {
-          throw new Error('No cards associated with the segments in this order.');
+        if (!cardsToReveal.length) {
+          throw new Error('No new cards associated with the segments in this order.');
         }
 
-        let newCardsEarned = [];
-        for (const card of revealCards) {
-          // FIX: Use the global client
-          let { data: existing, error } = await window.supabaseClient.from('cards_earned')
-            .select('id')
-            .eq('customer_email', userEmail)
-            .eq('card_name', card)
-            .eq('order_id', order_id); 
-            
-          if (error) console.error("Error checking cards_earned:", error);
-
-          if (!existing || existing.length === 0) {
-            console.log(`Granting card ${card} for order ${order_id}`);
-            newCardsEarned.push(card);
-            // FIX: Use the global client
-            await window.supabaseClient.from('cards_earned').insert({
-              customer_email: userEmail,
-              card_name: card,
-              order_id: order_id,
-              earned_at: new Date().toISOString()
-            });
-          }
-        }
+        // Insert only the new unique cards from this order
+        let cardsToInsert = cardsToReveal.map(cardName => ({
+            customer_email: userEmail,
+            card_name: cardName,
+            order_id: currentOrderId
+        }));
         
-        // **LEADERBOARD FIX**: Update stats regardless of *new* cards.
-        // This fixes the bug where a user with 1 card wasn't showing.
+        if (cardsToInsert.length > 0) {
+            const { error: insertError } = await window.supabaseClient
+                .from('cards_earned')
+                .insert(cardsToInsert);
+            if (insertError) throw insertError;
+            console.log(`Inserted ${cardsToInsert.length} new cards into cards_earned.`);
+        }
+
+        // Update leaderboard based on user's *total* unique card count
         await updateLeaderboardStats(userEmail, customer_name);
-        
-        // Send Webengage event only for *newly* earned cards
-        if (newCardsEarned.length > 0) {
-          // Webengage track REMOVED
-          console.log("Webengage event removed. Would have tracked:", newCardsEarned);
-        } else {
-          console.log("No new cards earned this order. Showing all cards from this order.");
-        }
 
       } catch (err) {
         console.error("Reveal flow error:", err);
@@ -211,16 +180,16 @@
       }
     }
 
-    if (revealCards.length === 0) {
-        loadingMsg.innerHTML = `<div class="pb-cash-text" style="margin-top:100px;">You didn't earn any cards in this order.</div>`;
+    if (cardsToReveal.length === 0) {
+        loadingMsg.innerHTML = `<div class="pb-cash-text" style="margin-top:100px;">You didn't earn any new cards in this order.</div>`;
         redeemBtn.style.display = "block";
         redeemBtn.style.opacity = "1";
         return;
     }
 
-    // --- NEW: Preload Images ---
+    // --- Preload Images ---
     loadingSubtext.textContent = "Preloading Card Art...";
-    const imagePromises = revealCards.map(cardName => {
+    const imagePromises = cardsToReveal.map(cardName => {
       return new Promise((resolve, reject) => {
         const img = new Image();
         img.src = CARD_IMAGES[cardName];
@@ -228,35 +197,31 @@
         img.onerror = reject;
       });
     });
-
-    try {
-      await Promise.all(imagePromises);
-    } catch (err) {
-      console.error("Failed to preload images", err);
-      // Continue anyway, it might just look janky
-    }
-
+    
+    try { await Promise.all(imagePromises); } catch (err) { console.error("Failed to preload images", err); }
     loadingMsg.style.display = 'none';
 
     // 2. Build the 2-column grid
     const grid = document.createElement('div');
     grid.className = "reveal-card-grid";
-
-    let numCards = revealCards.length;
     
-    if (numCards === 7) {
+    const numUniqueCards = cardsToReveal.length;
+    
+    if (numUniqueCards === 7) {
       grid.classList.add('seven-cards');
     }
 
-    let otherCards = ALL_CARD_NAMES.filter(c => !revealCards.includes(c));
+    // Show locked cards for slots 1-7
+    let otherCards = ALL_CARD_NAMES.filter(c => !cardsToReveal.includes(c));
     let lockCount = 0;
-    if (numCards < 8) {
-        lockCount = numCards % 2 === 1 ? 1 : 0;
-        if (numCards === 1) lockCount = 3; 
+    if (numUniqueCards < 8) {
+        // This fills out the grid to be even, or 7 total
+        lockCount = numUniqueCards % 2 === 1 ? 1 : 0; // Add 1 if odd
+        if (numUniqueCards === 1) lockCount = 3; // Special case for 1 card
     }
     
     let slots = [
-        ...revealCards.map(name => ({ name, owned: true })),
+        ...cardsToReveal.map(name => ({ name, owned: true })),
         ...new Array(lockCount).fill(0).map((_, i) => ({ 
             name: otherCards[i % otherCards.length],
             owned: false 
@@ -277,46 +242,46 @@
     }
     stage.appendChild(grid);
 
-    await revealOneByOne(revealCards, grid);
+    // Animation shows *unique* cards from this order
+    await revealOneByOne(cardsToReveal, grid);
     
     redeemBtn.style.display = "block";
     redeemBtn.style.opacity = "1";
   }
 
   // Animation sequence
-  async function revealOneByOne(cards, grid) {
+  async function revealOneByOne(uniqueCards, grid) {
     const delay = (ms) => new Promise(res => setTimeout(res, ms));
-
-    for (let i = 0; i < cards.length; i++) {
-      const cardName = cards[i];
-      
+    for (let i = 0; i < uniqueCards.length; i++) {
+      const cardName = uniqueCards[i];
       const bigCard = document.createElement('img');
       bigCard.className = "reveal-card-big";
       bigCard.src = CARD_IMAGES[cardName] || "";
       stage.appendChild(bigCard);
-
+      
       await delay(50); 
       bigCard.classList.add('is-revealing');
       
-      await delay(1200); // Hold the big card for 1.2s
-
-      bigCard.classList.add('is-hiding');
+      await delay(1200); // Hold the big card
       
-      await delay(250); 
+      bigCard.classList.add('is-hiding');
+      await delay(250); // Wait for shrink
+      
+      // Find the corresponding grid card and pop it in
       const gridCard = grid.querySelector(`.reveal-card-static[data-card-name="${cardName}"]`);
       if (gridCard) {
-        gridCard.classList.add('pop-in'); // Pop in the grid card
+        gridCard.classList.add('pop-in');
       }
-
-      await delay(300); 
-      bigCard.remove();
       
+      await delay(300); // Wait for pop-in
+      bigCard.remove();
       await delay(200); // Pause before next card
     }
   }
 
   // --- Navigation ---
   redeemBtn.onclick = () => {
+    // **LOGIC CHANGE: REMOVED order_id from URL**
     window.location.href = `redeem.html?email=${encodeURIComponent(userEmail)}`;
   };
 
