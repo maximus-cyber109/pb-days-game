@@ -30,16 +30,12 @@ exports.handler = async (event, context) => {
 
     let searchUrl;
     
-    // If orderId provided, fetch that specific order
     if (orderId) {
-      console.log('Fetching specific order:', orderId);
       searchUrl = `${BASE_URL}/orders?` +
         `searchCriteria[filter_groups][0][filters][0][field]=increment_id&` +
         `searchCriteria[filter_groups][0][filters][0][value]=${encodeURIComponent(orderId)}&` +
         `searchCriteria[filter_groups][0][filters][0][condition_type]=eq`;
     } else {
-      // Otherwise fetch by email, sorted by created_at DESC (newest first)
-      console.log('Fetching latest order for email:', email);
       searchUrl = `${BASE_URL}/orders?` +
         `searchCriteria[filter_groups][0][filters][0][field]=customer_email&` +
         `searchCriteria[filter_groups][0][filters][0][value]=${encodeURIComponent(email.toLowerCase())}&` +
@@ -57,24 +53,17 @@ exports.handler = async (event, context) => {
       timeout: 12000
     });
 
-    console.log('Response items:', response.data.items?.length);
-
     const ord = (response.data.items && response.data.items.length > 0) 
       ? response.data.items[0] 
       : null;
     
     if (!ord) {
-      console.warn('No order found');
       return { 
         statusCode: 404, 
         headers, 
         body: JSON.stringify({ success: false, error: 'Order not found' }) 
       };
     }
-
-    console.log('✓ Order:', ord.entity_id, 'Increment:', ord.increment_id, 'Email:', ord.customer_email);
-    console.log('✓ Items count:', ord.items?.length);
-    console.log('✓ SKUs:', ord.items?.map(i => i.sku));
 
     const items = ord.items || [];
     const skus = items
@@ -85,18 +74,19 @@ exports.handler = async (event, context) => {
       return { 
         statusCode: 400, 
         headers, 
-        body: JSON.stringify({ 
-          success: false, 
-          error: 'Order has no SKUs' 
-        }) 
+        body: JSON.stringify({ success: false, error: 'Order has no SKUs' }) 
       };
     }
+
+    // ADDED: Customer Name
+    const customer_name = `${ord.customer_firstname || ''} ${ord.customer_lastname || ''}`.trim();
 
     const orderOut = {
       id: ord.entity_id,
       increment_id: ord.increment_id,
       grand_total: ord.grand_total,
       created_at: ord.created_at,
+      customer_name: customer_name, // ADDED
       items: items.map(i => ({ 
         sku: i.sku, 
         name: i.name || '', 
@@ -105,15 +95,14 @@ exports.handler = async (event, context) => {
       }))
     };
 
-    console.log('✓ Returning order with', skus.length, 'SKUs:', skus);
-
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({ 
         success: true, 
         order: orderOut,
-        skus: skus
+        skus: skus,
+        customer_name: customer_name // ADDED
       })
     };
 
