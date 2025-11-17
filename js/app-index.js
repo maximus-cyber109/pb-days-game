@@ -19,10 +19,7 @@
   let overrideCards = [];
   const ALL_CARD_NAMES = Object.keys(CARD_IMAGES);
 
-  // --- Webengage Init ---
-  if (typeof webengage !== "undefined" && window.ENV.WEBENGAGE_LICENSE_CODE) {
-    webengage.init(window.ENV.WEBENGAGE_LICENSE_CODE);
-  }
+  // --- Webengage Init REMOVED ---
 
   // --- Initialization ---
   initSupabase();
@@ -59,9 +56,7 @@
       e.preventDefault();
       userEmail = box.querySelector('#email-input').value.trim().toLowerCase();
       if (userEmail) {
-        if (typeof webengage !== "undefined") {
-          webengage.user.login(userEmail);
-        }
+        // webengage.user.login(userEmail); REMOVED
         box.classList.remove('show');
         setTimeout(() => box.remove(), 300);
         startRevealFlow();
@@ -77,9 +72,7 @@
       return false;
     }
     userEmail = email.toLowerCase();
-    if (typeof webengage !== "undefined") {
-      webengage.user.login(userEmail);
-    }
+    // webengage.user.login(userEmail); REMOVED
     return true;
   }
 
@@ -164,10 +157,7 @@
         customer_name = data.customer_name; // Get name
         order_id = data.order.increment_id; // Get order ID
         
-        // Set customer name in Webengage
-        if (typeof webengage !== "undefined" && customer_name) {
-            webengage.user.setAttribute('we_customer_name', customer_name);
-        }
+        // Set customer name in Webengage REMOVED
         
         revealCards = await window.getCardsFromOrderSkus(data.skus);
         console.log("Cards from segments:", revealCards);
@@ -204,15 +194,8 @@
         
         // Send Webengage event only for *newly* earned cards
         if (newCardsEarned.length > 0) {
-          if (typeof webengage !== "undefined") {
-            webengage.track('pb_cards_earned', {
-              email: userEmail,
-              order_id: order_id,
-              customer_name: customer_name,
-              cards: newCardsEarned,
-              card_count: newCardsEarned.length
-            });
-          }
+          // Webengage track REMOVED
+          console.log("Webengage event removed. Would have tracked:", newCardsEarned);
         } else {
           console.log("No new cards earned this order. Showing all cards from this order.");
         }
