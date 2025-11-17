@@ -1,5 +1,40 @@
 const axios = require('axios');
 
+// --- NEW: Webengage Helper Function ---
+// This function sends events from the backend
+async function sendWebengageEvent(eventName, data) {
+  const licenseCode = process.env.WEBENGAGE_LICENSE_CODE;
+  const apiKey = process.env.WEBENGAGE_API_KEY;
+
+  if (!licenseCode || !apiKey) {
+    console.warn('Webengage ENV not configured. Skipping event.');
+    return;
+  }
+
+  const apiUrl = `https://api.webengage.com/v1/accounts/${licenseCode}/events`;
+  
+  try {
+    const payload = {
+      userId: data.email, // Use email as the primary ID
+      eventName: eventName,
+      eventData: data
+    };
+
+    await axios.post(apiUrl, payload, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 5000
+    });
+    console.log(`Webengage event [${eventName}] sent for ${data.email}`);
+  } catch (error) {
+    console.error(`Webengage event [${eventName}] failed:`, error.message);
+  }
+}
+// --- End Webengage Helper ---
+
+
 exports.handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -94,6 +129,15 @@ exports.handler = async (event, context) => {
         price: i.price || 0 
       }))
     };
+    
+    // **NEW: Send Webengage event from backend**
+    // We do this *before* returning, but don't wait for it
+    sendWebengageEvent('pb_cards_earned', {
+      email: email.toLowerCase(),
+      order_id: ord.increment_id,
+      customer_name: customer_name,
+      skus: skus
+    }).catch(err => console.error("Async Webengage call failed:", err)); // Log error but don't block response
 
     return {
       statusCode: 200,
