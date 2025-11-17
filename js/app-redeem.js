@@ -59,52 +59,8 @@
         if (earnedCards.length === 0) break; 
     }
     
-    track.innerHTML = cardsHtml + cardsHtml; // Duplicate track for seamless loop
-  }
-
-  function renderRockSlider(count) {
-    const container = document.getElementById('slider-rocks');
-    const innerBar = document.getElementById('coc-progress-inner');
-    const text = document.getElementById('slider-text');
-    
-    if (!container || !innerBar || !text) return;
-    
-    let out = "";
-    for (let i = 0; i < TOTAL_CARDS_TO_COLLECT; ++i) {
-      out += `<span class="coc-progress-rock${i < count ? " earned" : ""}"></span>`;
-    }
-    container.innerHTML = out;
-    innerBar.style.width = `${(count / TOTAL_CARDS_TO_COLLECT) * 100}%`;
-    text.innerText = `${count}/${TOTAL_CARDS_TO_COLLECT}`;
-  }
-  
-  async function renderRewardGrid() {
-    const rewardSection = document.getElementById('reward-section');
-    if (!rewardSection) return;
-    
-    rewardSection.innerHTML = "";
-    
-    // NEW: Psychological Trigger for Tier 1
-    if (mainTier === '1') {
-      rewardSection.innerHTML = `<div class="reward-tier1-prompt">
-        You're just one step away!<br>
-        <span style="color:#fedc07; font-size: 1.2em;">Unlock 2+ Cards</span><br>
-        to claim your first amazing rewards!
-      </div>`;
-      return; // Stop here for Tier 1
-    }
-    
-    const rewards = await window.getLiveRewardsByTier(mainTier);
-    
-    if (!rewards || rewards.length === 0) {
-      rewardSection.innerHTML = `<p class="reward-tier1-prompt" style="font-size: 1rem;">
-        No rewards are active for this tier right now.
-        <br>Check back soon!
-      </p>`;
-      return;
-    }
-    
-    let { data: redeemedSKUsData } = await supabase.from('rewards_redeemed')
+    // FIX: Use the global client
+    let { data: redeemedSKUsData } = await window.supabaseClient.from('rewards_redeemed')
         .select('sku')
         .eq('email', userEmail);
     const redeemedSKUs = redeemedSKUsData ? redeemedSKUsData.map(r => r.sku) : [];
@@ -153,7 +109,8 @@
     const lbContainer = document.getElementById('leaderboard');
     if (!lbContainer) return;
     
-    let { data: leaders, error } = await supabase.from('customer_stats')
+    // FIX: Use the global client
+    let { data: leaders, error } = await window.supabaseClient.from('customer_stats')
       .select('customer_email,customer_name,unique_cards')
       .order('unique_cards', { ascending: false })
       .limit(10);
@@ -209,7 +166,8 @@
     button.disabled = true;
 
     try {
-      let { data: product, error: fetchError } = await supabase
+      // FIX: Use the global client
+      let { data: product, error: fetchError } = await window.supabaseClient
         .from('reward_products')
         .select('remainingqty')
         .eq('sku', reward.sku)
@@ -221,14 +179,16 @@
       }
 
       const newQty = product.remainingqty - 1;
-      let { error: updateError } = await supabase
+      // FIX: Use the global client
+      let { error: updateError } = await window.supabaseClient
         .from('reward_products')
         .update({ remainingqty: newQty })
         .eq('sku', reward.sku);
         
       if (updateError) throw updateError;
 
-      let { error: logError } = await supabase
+      // FIX: Use the global client
+      let { error: logError } = await window.supabaseClient
         .from('rewards_redeemed')
         .insert({
           email: userEmail,
@@ -318,7 +278,8 @@
       return;
     }
     
-    let { data: claimed, error } = await supabase.from('pb_cash')
+    // FIX: Use the global client
+    let { data: claimed, error } = await window.supabaseClient.from('pb_cash')
       .select('id')
       .eq('email', userEmail);
       
@@ -346,7 +307,8 @@
           }
 
           if (orderData.order.items) {
-            let { data: prods } = await supabase.from('products_ordered')
+            // FIX: Use the global client
+            let { data: prods } = await window.supabaseClient.from('products_ordered')
               .select('p_code, product_price')
               .in('p_code', orderData.order.items.map(i => i.sku));
               
@@ -378,7 +340,8 @@
       claimBtn.disabled = true;
       claimBtn.textContent = "Claiming...";
       
-      let { error } = await supabase.from('pb_cash').insert({ 
+      // FIX: Use the global client
+      let { error } = await window.supabaseClient.from('pb_cash').insert({ 
         email: userEmail, 
         amount: pbCashAmount, 
         reward_time: new Date().toISOString() 
@@ -423,7 +386,8 @@
     if (userIsOverride) {
       userCards = ALL_CARDS.slice(0, overrideInfo.cardCount);
     } else {
-      let { data: earned, error } = await supabase.from('cards_earned')
+      // FIX: Use the global client
+      let { data: earned, error } = await window.supabaseClient.from('cards_earned')
         .select('card_name')
         .eq('customer_email', userEmail);
       
