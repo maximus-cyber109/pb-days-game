@@ -36,20 +36,14 @@
       console.log("🔍 DEBUG: Override detected:", t);
       
       if (t === "1") return { tier: "1", cardCount: 1 };
-      
-      // Support both old (2-4) and new (2-3) formats
       if (t === "2-3" || t === "2-4") return { tier: "2-3", cardCount: 3 };
-      
-      // Support both old (5-6) and new (4-6) formats
       if (t === "4-6" || t === "5-6") return { tier: "4-6", cardCount: 6 };
-      
       if (t === "7") return { tier: "7", cardCount: 7 };
     }
     return null;
   }
   
   function getTierFromCount(count) {
-    // Logic: 1 -> Tier 1 | 2-3 -> Tier 2-3 | 4-6 -> Tier 4-6 | 7 -> Tier 7
     return (count === 1) ? '1'
          : (count >= 2 && count <= 3) ? '2-3'
          : (count >= 4 && count <= 6) ? '4-6'
@@ -105,8 +99,6 @@
       return;
     }
     
-    console.log(`🔍 DEBUG: Rendering Grid for Tier: ${mainTier}`);
-
     if (mainTier === '1') {
       rewardSection.innerHTML = `<div class="reward-tier1-prompt">
         You're just one step away!<br>
@@ -114,15 +106,10 @@
         to claim your first amazing rewards!
       </div>`;
     } else {
-        // Fetch rewards from Supabase
         const rewards = await window.getLiveRewardsByTier(mainTier);
-        
-        console.log(`🔍 DEBUG: Rewards found for ${mainTier}:`, rewards ? rewards.length : 0);
-
         if (!rewards || rewards.length === 0) {
           rewardSection.innerHTML = `<p class="reward-tier1-prompt" style="font-size: 1rem;">
-            No rewards found for Tier <strong>${mainTier}</strong>.<br>
-            <span style="font-size:0.8em; color:#ccc;">(If you are admin: Check Supabase 'tier' column matches '${mainTier}')</span>
+            No rewards found for Tier <strong>${mainTier}</strong>.
           </p>`;
         } else {
           for (let reward of rewards) {
@@ -163,7 +150,6 @@
         }
     }
 
-    // Always add the "Unlock More" tile
     const unlockCard = document.createElement('a');
     unlockCard.className = "product-card unlock-more";
     unlockCard.href = "https://pinkblue.in";
@@ -218,25 +204,22 @@
     button.disabled = true;
 
     try {
-      // Call the backend function to handle DB logic
       const response = await fetch('/.netlify/functions/redeem-reward', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: userEmail,
           reward: reward,
-          customerName: customerName, // Passed from global state
-          cardsHeldCount: uniqueEarnedCards.length // Passed from global state
+          customerName: customerName, 
+          cardsHeldCount: uniqueEarnedCards.length 
         })
       });
 
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Redemption failed");
       
-      // Success!
       button.textContent = "Redeemed!";
       
-      // Fire-and-forget Webengage
       fetch('/.netlify/functions/send-redeem-event', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -263,7 +246,6 @@
       }
     }
   }
-
 
   function setupGalleryModal() {
     const modal = document.getElementById('gallery-modal');
@@ -370,7 +352,7 @@
             email: userEmail,
             orderIdUsed: lastOrderId,
             amount: pbCashAmount,
-            customerName: customerName // Passed for event
+            customerName: customerName 
           })
         });
 
@@ -379,7 +361,6 @@
 
         claimBtn.textContent = "Claimed!";
         
-        // Fire-and-forget Event
         fetch('/.netlify/functions/send-redeem-event', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -418,15 +399,6 @@
     }
 
     initSupabase();
-
-    // Show the rules modal first
-    const rulesModal = document.getElementById('rules-modal');
-    if (rulesModal) {
-      rulesModal.classList.add('show');
-      document.getElementById('rules-continue-btn').onclick = () => {
-        rulesModal.classList.remove('show');
-      }
-    }
     
     overrideInfo = getOverrideTier(userEmail);
     userIsOverride = !!overrideInfo;
@@ -471,6 +443,18 @@
       }
     }
 
+    // --- MOVED DOWN: Show Rules Modal ONLY if not redeemed ---
+    const rulesModal = document.getElementById('rules-modal');
+    if (rulesModal && !redeemedItem && !redeemedCash) {
+      rulesModal.classList.add('show');
+      document.getElementById('rules-continue-btn').onclick = () => {
+        rulesModal.classList.remove('show');
+      }
+    } else if (rulesModal) {
+        // Ensure it's hidden if they have redeemed
+        rulesModal.classList.remove('show');
+    }
+
     // 2. Fetch *all* user's earned cards
     let allEarnedCards = [];
     
@@ -505,7 +489,6 @@
     uniqueEarnedCards = [...new Set(allEarnedCards)];
     const uniqueCardCount = uniqueEarnedCards.length;
     
-    // ★★★ HERE IS THE UPDATED LOGIC ★★★
     mainTier = getTierFromCount(uniqueCardCount);
     
     console.log(`User has ${uniqueCardCount} total unique cards. Tier: ${mainTier}`);
