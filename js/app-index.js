@@ -16,7 +16,6 @@
   
   let userEmail = "";
   let userIsOverride = false;
-  let overrideCards = [];
   const ALL_CARD_NAMES = Object.keys(CARD_IMAGES);
   let currentOrderId = 'N/A'; 
   let customerName = "";
@@ -33,8 +32,8 @@
     if (match) {
       const t = match[1];
       if (t === "1") return { tier: "1", numCards: 1 };
-      if (t === "2-3") return { tier: "2-3", numCards: 3 }; // Changed from 2-4
-      if (t === "4-6") return { tier: "4-6", numCards: 6 }; // Changed from 5-6
+      if (t === "2-3") return { tier: "2-3", numCards: 3 }; 
+      if (t === "4-6") return { tier: "4-6", numCards: 6 }; 
       if (t === "7") return { tier: "7", numCards: 7 };
     }
     return null;
@@ -129,28 +128,48 @@
           throw new Error(data.error || 'No order items found.');
         }
 
+        // --- NEW: Check if Order is already Processed ---
+        currentOrderId = data.order.increment_id;
+        
+        const { data: existingOrderCards } = await window.supabaseClient
+            .from('cards_earned')
+            .select('id')
+            .eq('order_id', currentOrderId)
+            .limit(1);
+
+        if (existingOrderCards && existingOrderCards.length > 0) {
+            console.log("Order already processed. Redirecting...");
+            loadingSubtext.textContent = "Order already processed! Redirecting...";
+            setTimeout(() => {
+                window.location.href = `redeem.html?email=${encodeURIComponent(userEmail)}`;
+            }, 1000);
+            return;
+        }
+        // ------------------------------------------------
+
         console.log("Order Items:", data.order.items);
         customer_name = data.customer_name;
         customerName = data.customer_name; 
-        currentOrderId = data.order.increment_id;
         
-        // CHANGED: Pass full items (with Price & Qty) to logic
         cardsToReveal = await window.getCardsFromOrderSkus(data.order.items);
         console.log("Qualified Cards:", cardsToReveal);
 
-        if (!cardsToReveal.length) {
-           // Just empty logic, handled below
-        } else {
+        if (cardsToReveal.length > 0) {
             const { data: existingCardsData } = await window.supabaseClient
-            .from('cards_earned')
-            .select('card_name')
-            .eq('customer_email', userEmail)
-            .in('card_name', cardsToReveal);
+                .from('cards_earned')
+                .select('card_name')
+                .eq('customer_email', userEmail)
+                .in('card_name', cardsToReveal);
             
             const existingCardNames = new Set(existingCardsData.map(c => c.card_name));
             const newCardsToInsert = cardsToReveal.filter(cardName => !existingCardNames.has(cardName));
 
-            let cardsToInsert = newCardsToInsert.map(cardName => ({
+            // NOTE: We insert ALL cards earned in this order to 'cards_earned'
+            // so the duplicate order check works, even if the user already owns the card types.
+            // But we usually only want to track unique *types* for leaderboard.
+            // For the "Order Check" to work, we must insert rows for this order.
+            
+            let cardsToInsert = cardsToReveal.map(cardName => ({
                 customer_email: userEmail,
                 card_name: cardName,
                 order_id: currentOrderId
@@ -209,7 +228,6 @@
 
     await revealOneByOne(cardsToReveal, grid);
     
-    // Fire-and-forget event
     fetch('/.netlify/functions/send-card-event', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
