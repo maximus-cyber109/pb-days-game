@@ -1,4 +1,4 @@
-const fetch = require('node-fetch'); // OR use built-in fetch if Node 18+
+const axios = require('axios');
 
 exports.handler = async (event, context) => {
   // Fire-and-forget headers
@@ -48,17 +48,16 @@ exports.handler = async (event, context) => {
 
   try {
       console.log(`Sending ${eventName} for ${email}`);
-      await fetch(apiUrl, {
-          method: 'POST',
+      // Switch to AXIOS (Already installed)
+      await axios.post(apiUrl, payload, {
           headers: {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
+          }
       });
       return { statusCode: 200, headers, body: 'Event Sent' };
   } catch (e) {
-      console.error("Webengage error:", e);
+      console.error("Webengage error:", e.message);
       return { statusCode: 500, headers, body: e.message };
   }
 };
