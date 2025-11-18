@@ -1,7 +1,6 @@
 const axios = require('axios');
 
 exports.handler = async (event, context) => {
-  // Fire-and-forget headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -28,6 +27,8 @@ exports.handler = async (event, context) => {
           reward_name: data.reward.product_name,
           reward_tier: data.reward.tier,
           reward_price: data.reward.price || 0,
+          // ★★★ NEW: Added Image URL ★★★
+          reward_image_url: data.reward.image_url || '', 
           customer_name: data.customerName,
           cards_held_count: data.cardsHeldCount
       };
@@ -48,7 +49,6 @@ exports.handler = async (event, context) => {
 
   try {
       console.log(`Sending ${eventName} for ${email}`);
-      // Switch to AXIOS (Already installed)
       await axios.post(apiUrl, payload, {
           headers: {
             'Authorization': `Bearer ${apiKey}`,
