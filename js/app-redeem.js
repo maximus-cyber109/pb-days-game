@@ -2,8 +2,12 @@
 (async function() {
   'use strict';
 
+  // --- CONFIG & GLOBAL VARS ---
   const config = window.CR_CONFIG;
-  if (!config) { console.error("CR_CONFIG not loaded!"); return; }
+  if (!config) {
+    console.error("CR_CONFIG not loaded!");
+    return;
+  }
 
   const CARD_IMAGES = config.cards;
   const ALL_CARDS = Object.keys(CARD_IMAGES); 
@@ -14,38 +18,50 @@
   
   let userIsOverride = false;
   let overrideInfo = null;
+  
   let uniqueEarnedCards = [];
+  
   let mainTier = "1";
   let customerName = "";
-  let lastOrderId = 'N/A';
+  let lastOrderId = 'N/A'; // For logging PB Cash claims
+  
   let redeemedItem = null;
   let redeemedCash = null;
 
-  // --- UPDATED TIERS: 1, 2-3, 4-6, 7 ---
+  // --- UTILITY: TIER LOGIC UPDATED (2-3, 4-6) ---
   function getOverrideTier(email) {
     let match = (email || '').match(/-ovrmaaz(\d(?:-\d)?)/);
     if (match) {
       const t = match[1];
+      console.log("🔍 DEBUG: Override detected:", t);
+      
       if (t === "1") return { tier: "1", cardCount: 1 };
-      if (t === "2-3") return { tier: "2-3", cardCount: 3 };
-      if (t === "4-6") return { tier: "4-6", cardCount: 6 };
+      
+      // Support both old (2-4) and new (2-3) formats
+      if (t === "2-3" || t === "2-4") return { tier: "2-3", cardCount: 3 };
+      
+      // Support both old (5-6) and new (4-6) formats
+      if (t === "4-6" || t === "5-6") return { tier: "4-6", cardCount: 6 };
+      
       if (t === "7") return { tier: "7", cardCount: 7 };
     }
     return null;
   }
   
   function getTierFromCount(count) {
+    // Logic: 1 -> Tier 1 | 2-3 -> Tier 2-3 | 4-6 -> Tier 4-6 | 7 -> Tier 7
     return (count === 1) ? '1'
-         : (count >= 2 && count <= 3) ? '2-3'  // Changed
-         : (count >= 4 && count <= 6) ? '4-6'  // Changed
+         : (count >= 2 && count <= 3) ? '2-3'
+         : (count >= 4 && count <= 6) ? '4-6'
          : (count >= 7) ? '7' : '1';
   }
 
+  // --- UI RENDERING ---
   function renderRockSlider(count) {
     const rocksContainer = document.getElementById('slider-rocks');
     const innerBar = document.getElementById('coc-progress-inner');
     const textEl = document.getElementById('slider-text');
-    if (!rocksContainer) return;
+    if (!rocksContainer || !innerBar || !textEl) return;
     
     let rocksHtml = "";
     for (let i = 0; i < TOTAL_CARDS_TO_COLLECT; i++) {
@@ -84,7 +100,12 @@
     if (!rewardSection) return;
     
     rewardSection.innerHTML = "";
-    if (redeemedItem || redeemedCash) return;
+    
+    if (redeemedItem || redeemedCash) {
+      return;
+    }
+    
+    console.log(`🔍 DEBUG: Rendering Grid for Tier: ${mainTier}`);
 
     if (mainTier === '1') {
       rewardSection.innerHTML = `<div class="reward-tier1-prompt">
@@ -93,11 +114,15 @@
         to claim your first amazing rewards!
       </div>`;
     } else {
+        // Fetch rewards from Supabase
         const rewards = await window.getLiveRewardsByTier(mainTier);
+        
+        console.log(`🔍 DEBUG: Rewards found for ${mainTier}:`, rewards ? rewards.length : 0);
+
         if (!rewards || rewards.length === 0) {
           rewardSection.innerHTML = `<p class="reward-tier1-prompt" style="font-size: 1rem;">
-            No rewards are active for your tier right now.
-            <br>Check back soon!
+            No rewards found for Tier <strong>${mainTier}</strong>.<br>
+            <span style="font-size:0.8em; color:#ccc;">(If you are admin: Check Supabase 'tier' column matches '${mainTier}')</span>
           </p>`;
         } else {
           for (let reward of rewards) {
@@ -107,6 +132,7 @@
             let img = new Image();
             img.className = "product-img";
             img.src = reward.image_url || config.logo;
+            img.alt = reward.product_name;
             c.appendChild(img);
             
             let title = document.createElement('div');
@@ -127,6 +153,7 @@
               redeemBtn.disabled = true;
             } else {
               redeemBtn.textContent = "Redeem";
+              redeemBtn.disabled = false;
             }
             
             redeemBtn.onclick = () => handleRedeemClick(reward, redeemBtn);
@@ -135,15 +162,17 @@
           }
         }
     }
-    
+
+    // Always add the "Unlock More" tile
     const unlockCard = document.createElement('a');
     unlockCard.className = "product-card unlock-more";
     unlockCard.href = "https://pinkblue.in";
     unlockCard.target = "_blank";
+    unlockCard.rel = "noopener noreferrer";
     unlockCard.innerHTML = `
-      <img src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png" class="product-img" style="opacity: 0.5;">
+      <img src="https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png" alt="Unlock More" class="product-img" style="opacity: 0.5;">
       <div class="product-name">Unlock More Tiers!</div>
-      <div class="product-price" style="color: #a394f5; font-size: 0.9rem; flex-grow: 1; margin-top: 1em;">Place new orders to collect all 7 cards!</div>
+      <div class="product-price" style="color: #a394f5; font-size: 0.9rem; flex-grow: 1; margin-top: 1em;">Place new orders to collect all 7 cards and reach the top rewards.</div>
       <button class="btn-3d-glass" style="margin-top: 1em;">Shop Now</button>
     `;
     rewardSection.appendChild(unlockCard);
@@ -152,12 +181,15 @@
   async function renderLeaderboard() {
     const lbContainer = document.getElementById('leaderboard');
     if (!lbContainer) return;
-    let { data: leaders } = await window.supabaseClient.from('customer_stats')
+    let { data: leaders, error } = await window.supabaseClient.from('customer_stats')
       .select('customer_email,customer_name,unique_cards')
       .order('unique_cards', { ascending: false })
       .limit(10);
-    
-    if (!leaders) return;
+    if (error) {
+      console.error("Leaderboard error:", error);
+      lbContainer.innerHTML = "<p>Leaderboard loading failed.</p>";
+      return;
+    }
     let lbHtml = (leaders.map((l, i) => `
       <div class="leaderboard-row">
         <span class="leaderboard-rank ${i === 0 ? 'first' : ''}">${i === 0 ? "👑" : i + 1}</span>
@@ -168,6 +200,8 @@
     lbContainer.innerHTML = lbHtml;
   }
   
+  // --- Event Handlers & Logic ---
+
   function showRedeemSuccessModal(reward) {
     const modal = document.getElementById('redeem-success-modal');
     document.getElementById('redeem-success-img').src = reward.image_url || config.logo;
@@ -184,49 +218,91 @@
     button.disabled = true;
 
     try {
-      // 1. Only do DB transaction (Fast)
+      // Call the backend function to handle DB logic
       const response = await fetch('/.netlify/functions/redeem-reward', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: userEmail,
-          reward: reward
+          reward: reward,
+          customerName: customerName, // Passed from global state
+          cardsHeldCount: uniqueEarnedCards.length // Passed from global state
         })
       });
 
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Redemption failed");
       
+      // Success!
       button.textContent = "Redeemed!";
       
-      // 2. Send Event Asynchronously (Fire & Forget)
+      // Fire-and-forget Webengage
       fetch('/.netlify/functions/send-redeem-event', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userEmail,
+        body: JSON.stringify({ 
+          email: userEmail, 
           type: 'reward',
           reward: reward,
           customerName: customerName,
           cardsHeldCount: uniqueEarnedCards.length
         })
-      }).catch(err => console.error("Event send failed:", err));
+      }).catch(err => console.error("Fire-and-forget send-redeem-event failed:", err));
 
       showRedeemSuccessModal(reward);
 
     } catch (err) {
       console.error("Redemption failed:", err.message);
-      if (err.message.includes("stock")) button.textContent = "Out of Stock";
-      else if (err.message.includes("claimed")) button.textContent = "Already Claimed";
-      else {
+      if (err.message.includes("stock")) {
+        button.textContent = "Out of Stock";
+      } else if (err.message.includes("claimed")) {
+        button.textContent = "Already Claimed";
+      } else {
         button.textContent = "Error! Try Again";
         button.disabled = false;
       }
     }
   }
-  
-  // ... (Gallery Setup & PbCash logic omitted for brevity but remains similar) ...
-  // Just updated PbCash claim handler below:
+
+
+  function setupGalleryModal() {
+    const modal = document.getElementById('gallery-modal');
+    const cardImg = document.getElementById('gallery-card-img');
+    const cardNameEl = document.getElementById('gallery-card-name');
+    const openBtn = document.getElementById('open-gallery');
+    if (!modal) return;
+    
+    let galleryIdx = 0;
+    function updateGallery(idx) {
+      if (uniqueEarnedCards.length === 0) {
+          cardNameEl.innerText = "No Cards Yet";
+          cardImg.src = config.logo;
+          return;
+      }
+      let cardName = uniqueEarnedCards[idx];
+      cardImg.src = CARD_IMAGES[cardName];
+      cardNameEl.innerText = cardName.replace(/-/g, " ");
+      cardImg.className = "gallery-card-img revealed";
+    }
+    openBtn.onclick = function() {
+      galleryIdx = 0;
+      updateGallery(galleryIdx);
+      modal.classList.add('show');
+    }
+    document.getElementById('gallery-left').onclick = function() {
+      if (uniqueEarnedCards.length === 0) return;
+      galleryIdx = (galleryIdx + uniqueEarnedCards.length - 1) % uniqueEarnedCards.length;
+      updateGallery(galleryIdx);
+    }
+    document.getElementById('gallery-right').onclick = function() {
+      if (uniqueEarnedCards.length === 0) return;
+      galleryIdx = (galleryIdx + 1) % uniqueEarnedCards.length;
+      updateGallery(galleryIdx);
+    }
+    document.getElementById('gallery-close').onclick = function() {
+      modal.classList.remove('show');
+    }
+  }
   
   async function setupPbCashModal() {
     const showBtn = document.getElementById('show-pb-cash');
@@ -234,29 +310,59 @@
     const textEl = document.getElementById('pb-cash-text');
     const claimBtn = document.getElementById('pb-cash-claim');
     
-    if (redeemedItem || redeemedCash || mainTier !== '1') {
+    if (redeemedItem || redeemedCash) {
       showBtn.style.display = 'none';
       return;
     }
-
-    // ... (PB Cash Calc Logic Same) ...
-    let pbCashAmount = 0;
-    // ... Assume logic fetched amount ... 
-    if(userIsOverride) pbCashAmount = 40; // Placeholder for brevity
-    if(pbCashAmount <= 0) { showBtn.style.display = 'none'; return; }
-    showBtn.style.display = 'block';
-
-    showBtn.onclick = () => {
-       textEl.innerText = `You earned PB CASH: ₹${pbCashAmount}`;
-       modal.classList.add('show');
+    
+    if (mainTier !== '1') {
+      showBtn.style.display = 'none';
+      return;
     }
+    
+    let pbCashAmount = 0;
+    
+    if (userIsOverride) {
+      pbCashAmount = 40;
+    } else {
+      let orderData;
+      try {
+        orderData = await fetch('/.netlify/functions/magento-fetch', {
+          method: "POST", body: JSON.stringify({ email: userEmail, orderId: lastOrderId }), headers: { 'Content-Type': 'application/json' }
+        }).then(res => res.json());
 
+        if (orderData && orderData.success) {
+          if(orderData.customer_name) customerName = orderData.customer_name;
+          if (orderData.order.items) {
+            let { data: prods } = await window.supabaseClient.from('products_ordered')
+              .select('p_code, product_price')
+              .in('p_code', orderData.order.items.map(i => i.sku));
+            if (prods) {
+              pbCashAmount = window.calculatePbCash(prods);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch order for PB cash:", err);
+      }
+    }
+    
+    if (pbCashAmount <= 0) {
+      showBtn.style.display = 'none';
+      return;
+    }
+    
+    showBtn.style.display = 'block';
+    
+    showBtn.onclick = function() {
+      textEl.innerText = `You earned PB CASH: ₹${pbCashAmount || '0'}`;
+      modal.classList.add('show');
+    }
+    
     claimBtn.onclick = async function() {
       claimBtn.disabled = true;
       claimBtn.textContent = "Claiming...";
-      
       try {
-        // 1. DB Only (Fast)
         const response = await fetch('/.netlify/functions/redeem-cash', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -264,63 +370,147 @@
             email: userEmail,
             orderIdUsed: lastOrderId,
             amount: pbCashAmount,
-            customerName: customerName
+            customerName: customerName // Passed for event
           })
         });
 
         const result = await response.json();
-        if (!response.ok) throw new Error(result.error);
+        if (!response.ok) throw new Error(result.error || "Claim failed");
 
         claimBtn.textContent = "Claimed!";
         
-        // 2. Event (Fire & Forget)
+        // Fire-and-forget Event
         fetch('/.netlify/functions/send-redeem-event', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: userEmail,
+          body: JSON.stringify({ 
+            email: userEmail, 
             type: 'cash',
             amount: pbCashAmount,
             orderIdUsed: lastOrderId,
             customerName: customerName
           })
-        }).catch(err => console.error("Event send failed:", err));
+        }).catch(err => console.error("Fire-and-forget event failed:", err));
 
         modal.classList.remove('show');
         location.reload();
+
       } catch (err) {
-        // Error handling
+        console.error("PB Cash claim error:", err.message);
+        if (err.message.includes("claimed")) claimBtn.textContent = "Already Claimed";
+        else {
+          claimBtn.textContent = "Error! Try Again";
+          claimBtn.disabled = false;
+        }
       }
     }
-    document.getElementById('pb-cash-close').onclick = () => modal.classList.remove('show');
+    
+    document.getElementById('pb-cash-close').onclick = function() {
+      modal.classList.remove('show');
+    }
   }
 
-  // ... (Gallery Setup func) ...
-  function setupGalleryModal() { /* Same as before */ }
-
+  // --- Initialization ---
   async function mainRedeem() {
-    if (!userEmail) return;
-    initSupabase();
-    
-    // ... (Rules Modal logic) ...
+    if (!userEmail) {
+      document.body.innerHTML = `<div class="pb-cash-text" style="padding-top: 100px; text-align:center;">No email provided. Go back and enter your email.</div>`;
+      return;
+    }
 
+    initSupabase();
+
+    // Show the rules modal first
+    const rulesModal = document.getElementById('rules-modal');
+    if (rulesModal) {
+      rulesModal.classList.add('show');
+      document.getElementById('rules-continue-btn').onclick = () => {
+        rulesModal.classList.remove('show');
+      }
+    }
+    
     overrideInfo = getOverrideTier(userEmail);
     userIsOverride = !!overrideInfo;
 
-    // ... (Existing redemption check logic) ...
-
-    let allEarnedCards = [];
-    // ... (Fetch cards logic) ...
+    // 1. Check for ANY existing redemption
     if (!userIsOverride) {
-        // ... fetch from Supabase ...
-        // ... fetch Magento name ...
+      const { data: existingRedemption } = await window.supabaseClient
+          .from('rewards_redeemed')
+          .select('reward_name, reward_sku')
+          .eq('customer_email', userEmail)
+          .single();
+          
+      const { data: existingCash } = await window.supabaseClient
+          .from('pb_cash')
+          .select('amount')
+          .eq('customer_email', userEmail)
+          .single();
+
+      if (existingRedemption) {
+        redeemedItem = existingRedemption;
+        document.getElementById('redemption-area').style.display = 'none';
+        const msgEl = document.getElementById('already-redeemed-area');
+        
+        const { data: product } = await window.supabaseClient
+          .from('reward_products')
+          .select('image_url')
+          .eq('sku', redeemedItem.reward_sku)
+          .single();
+
+        document.getElementById('redeemed-item-img').src = product ? product.image_url : config.logo;
+        document.getElementById('redeemed-item-message').innerHTML = `You have already claimed your one-time reward:<br><strong style="color:#fedc07; font-size: 1.2em;">${redeemedItem.reward_name}</strong>`;
+        msgEl.style.display = 'block';
+
+      } else if (existingCash) {
+        redeemedCash = existingCash;
+        document.getElementById('redemption-area').style.display = 'none';
+        const msgEl = document.getElementById('already-redeemed-area');
+        
+        document.getElementById('redeemed-item-img').src = 'https://placehold.co/150x150/fdd835/3f227b?text=PB%20CASH';
+        document.getElementById('redeemed-item-message').innerHTML = `You have already claimed your one-time reward:<br><strong style="color:#fedc07; font-size: 1.2em;">PB Cash ₹${redeemedCash.amount}</strong>`;
+        msgEl.style.display = 'block';
+      }
+    }
+
+    // 2. Fetch *all* user's earned cards
+    let allEarnedCards = [];
+    
+    if (userIsOverride) {
+      for(let i = 0; i < overrideInfo.cardCount; i++) allEarnedCards.push(ALL_CARDS[i]);
+    } else {
+      const { data: earnedData, error: earnedError } = await window.supabaseClient
+        .from('cards_earned')
+        .select('card_name, order_id')
+        .eq('customer_email', userEmail)
+        .order('earned_at', { ascending: false });
+        
+      if (earnedError) {
+        console.error("Error fetching card data:", earnedError);
+        return;
+      }
+      
+      allEarnedCards = earnedData.map(c => c.card_name);
+      if (earnedData.length > 0) {
+        lastOrderId = earnedData[0].order_id;
+        
+        const orderData = await fetch('/.netlify/functions/magento-fetch', {
+          method: "POST", body: JSON.stringify({ email: userEmail, orderId: lastOrderId }), headers: { 'Content-Type': 'application/json' }
+        }).then(res => res.json());
+        if (orderData && orderData.success) {
+            customerName = orderData.customer_name;
+        }
+      }
     }
     
-    // Logic mock for compilation context
-    uniqueEarnedCards = []; // populated by logic above
+    // 3. Calculate *total unique* cards
+    uniqueEarnedCards = [...new Set(allEarnedCards)];
     const uniqueCardCount = uniqueEarnedCards.length;
-    mainTier = getTierFromCount(uniqueCardCount); // Uses NEW logic
+    
+    // ★★★ HERE IS THE UPDATED LOGIC ★★★
+    mainTier = getTierFromCount(uniqueCardCount);
+    
+    console.log(`User has ${uniqueCardCount} total unique cards. Tier: ${mainTier}`);
 
+    // 4. Render all UI components
     renderCardSlider(uniqueEarnedCards);
     renderRockSlider(uniqueCardCount);
     setupGalleryModal();
@@ -330,7 +520,9 @@
       renderLeaderboard(),
       setupPbCashModal()
     ]);
-  }
+
+  } // end mainRedeem
 
   mainRedeem();
+
 })();
