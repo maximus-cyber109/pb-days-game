@@ -18,26 +18,24 @@
   let userIsOverride = false;
   let overrideCards = [];
   const ALL_CARD_NAMES = Object.keys(CARD_IMAGES);
-  let currentOrderId = 'N/A'; // Store the order ID for logging
-  let customerName = ""; // Store customer name
+  let currentOrderId = 'N/A'; 
+  let customerName = "";
 
-  // --- Initialization ---
   initSupabase();
   if (emailCheck()) {
-    // Start the flow automatically
     startRevealFlow();
   }
 
-  // --- Email & Auth ---
+  // --- UPDATED TIER LOGIC: 1, 2-3, 4-6, 7 ---
   function getOverrideTier(email) {
     if (!email) return null;
     let match = email.match(/-ovrmaaz(\d(?:-\d)?)/);
     if (match) {
       const t = match[1];
       if (t === "1") return { tier: "1", numCards: 1 };
-      if (t === "2-4") return { tier: "2-4", numCards: 3 };
-      if (t === "5-6") return { tier: "5-6", numCards: 5 }; // 5-card test
-      if (t === "7") return { tier: "7", numCards: 7 }; // 7-card test
+      if (t === "2-3") return { tier: "2-3", numCards: 3 }; // Changed from 2-4
+      if (t === "4-6") return { tier: "4-6", numCards: 6 }; // Changed from 5-6
+      if (t === "7") return { tier: "7", numCards: 7 };
     }
     return null;
   }
@@ -59,7 +57,6 @@
       if (userEmail) {
         box.classList.remove('show');
         setTimeout(() => box.remove(), 300);
-        // Start the flow
         startRevealFlow();
       }
     }
@@ -76,59 +73,42 @@
     return true;
   }
 
-  // --- LEADERBOARD UPDATE ---
   async function updateLeaderboardStats(email, name) {
-    if (userIsOverride) {
-      console.log("Override user: Skipping leaderboard update.");
-      return;
-    }
+    if (userIsOverride) return;
     try {
-      // 1. Get ALL unique cards for this user
       const { data, error } = await window.supabaseClient
         .from('cards_earned')
         .select('card_name', { count: 'exact', head: false })
         .eq('customer_email', email);
-        
       if (error) throw error;
 
       const uniqueCards = [...new Set(data.map(c => c.card_name))];
       const uniqueCardCount = uniqueCards.length;
 
-      // 2. Upsert (insert or update) the customer_stats table
       const { error: upsertError } = await window.supabaseClient
         .from('customer_stats')
         .upsert(
-          { 
-            customer_email: email, 
-            customer_name: name, 
-            unique_cards: uniqueCardCount 
-          },
+          { customer_email: email, customer_name: name, unique_cards: uniqueCardCount },
           { onConflict: 'customer_email' }
         );
-
       if (upsertError) throw upsertError;
-      console.log(`Leaderboard updated for ${email}: ${uniqueCardCount} unique cards`);
     } catch (err) {
       console.error("Error updating leaderboard:", err);
     }
   }
 
-
-  // --- Main Card Reveal Logic ---
   async function startRevealFlow() {
     if (!stage) return;
     
-    // 1. Show "Thank you" and "Fetching"
     loadingMsg.style.display = 'block';
     loadingSubtext.textContent = "Fetching Your Cards...";
 
-    let cardsToReveal = []; // *Unique* cards from *this order*
+    let cardsToReveal = []; 
     let customer_name = userEmail.split('@')[0];
     let override = getOverrideTier(userEmail);
     userIsOverride = !!override;
 
     if (userIsOverride) {
-      console.log("Using override:", override);
       cardsToReveal = ALL_CARD_NAMES.slice(0, override.numCards);
       currentOrderId = `TEST_${Date.now()}`;
       customerName = "Test User";
@@ -142,99 +122,81 @@
           headers: { 'Content-Type': 'application/json' }
         });
         
-        if (!res.ok) {
-            const errData = await res.json();
-            throw new Error(errData.error || `Magento fetch failed: ${res.statusText}`);
-        }
+        if (!res.ok) throw new Error(`Magento fetch failed`);
         
         let data = await res.json();
-        if (!data.success || !data.order || !data.skus.length) {
-          throw new Error(data.error || 'No eligible SKUs found for this order.');
+        if (!data.success || !data.order || !data.order.items) {
+          throw new Error(data.error || 'No order items found.');
         }
 
-        console.log("Order SKUs:", data.skus);
+        console.log("Order Items:", data.order.items);
         customer_name = data.customer_name;
-        customerName = data.customer_name; // Save for event
+        customerName = data.customer_name; 
         currentOrderId = data.order.increment_id;
         
-        cardsToReveal = await window.getCardsFromOrderSkus(data.skus);
-        console.log("Cards from segments (unique):", cardsToReveal);
+        // CHANGED: Pass full items (with Price & Qty) to logic
+        cardsToReveal = await window.getCardsFromOrderSkus(data.order.items);
+        console.log("Qualified Cards:", cardsToReveal);
 
         if (!cardsToReveal.length) {
-          throw new Error('No new cards associated with the segments in this order.');
-        }
-
-        // Check which of these cards are *truly* new for the user
-        const { data: existingCardsData } = await window.supabaseClient
-          .from('cards_earned')
-          .select('card_name')
-          .eq('customer_email', userEmail)
-          .in('card_name', cardsToReveal);
-        
-        const existingCardNames = new Set(existingCardsData.map(c => c.card_name));
-        const newCardsToInsert = cardsToReveal.filter(cardName => !existingCardNames.has(cardName));
-
-        let cardsToInsert = newCardsToInsert.map(cardName => ({
-            customer_email: userEmail,
-            card_name: cardName,
-            order_id: currentOrderId
-        }));
-        
-        if (cardsToInsert.length > 0) {
-            const { error: insertError } = await window.supabaseClient
-                .from('cards_earned')
-                .insert(cardsToInsert);
-            if (insertError) throw insertError;
-            console.log(`Inserted ${cardsToInsert.length} new cards into cards_earned.`);
+           // Just empty logic, handled below
         } else {
-            console.log("No new unique cards to insert for this order.");
-        }
+            const { data: existingCardsData } = await window.supabaseClient
+            .from('cards_earned')
+            .select('card_name')
+            .eq('customer_email', userEmail)
+            .in('card_name', cardsToReveal);
+            
+            const existingCardNames = new Set(existingCardsData.map(c => c.card_name));
+            const newCardsToInsert = cardsToReveal.filter(cardName => !existingCardNames.has(cardName));
 
-        // Update leaderboard based on user's *total* unique card count
-        await updateLeaderboardStats(userEmail, customer_name);
+            let cardsToInsert = newCardsToInsert.map(cardName => ({
+                customer_email: userEmail,
+                card_name: cardName,
+                order_id: currentOrderId
+            }));
+            
+            if (cardsToInsert.length > 0) {
+                await window.supabaseClient.from('cards_earned').insert(cardsToInsert);
+            }
+            await updateLeaderboardStats(userEmail, customer_name);
+        }
 
       } catch (err) {
         console.error("Reveal flow error:", err);
-        loadingMsg.innerHTML = `<div class="pb-cash-text" style="margin-top:100px;">Could not find eligible cards for this order.<br/>${err.message}</div>`;
+        loadingMsg.innerHTML = `<div class="pb-cash-text" style="margin-top:100px;">Could not find eligible cards.<br/>${err.message}</div>`;
         return;
       }
     }
 
     if (cardsToReveal.length === 0) {
-        loadingMsg.innerHTML = `<div class="pb-cash-text" style="margin-top:100px;">You didn't earn any new cards in this order.</div>`;
+        loadingMsg.innerHTML = `<div class="pb-cash-text" style="margin-top:100px;">You didn't earn any new cards in this order.<br><span style="font-size:0.6em">Total spend per segment must be > ₹1000.</span></div>`;
         redeemBtn.style.display = "block";
         redeemBtn.style.opacity = "1";
         return;
     }
 
-    // --- Preload Images ---
     loadingSubtext.textContent = "Get Ready For Your Rewards!";
     const imagePromises = cardsToReveal.map(cardName => {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         const img = new Image();
         img.src = CARD_IMAGES[cardName];
         img.onload = resolve;
-        img.onerror = () => {
-            console.warn(`Failed to preload ${cardName}, resolving anyway`);
-            resolve(); // Don't block reveal for one broken image
-        };
+        img.onerror = resolve;
       });
     });
     
-    try { await Promise.all(imagePromises); } catch (err) { console.error("Failed to preload images", err); }
+    try { await Promise.all(imagePromises); } catch (err) {}
     loadingMsg.style.display = 'none';
 
-    // 2. Build the 2x2 grid
     const grid = document.createElement('div');
     grid.className = "reveal-card-grid";
-    // Add count-X class for styling 5th/7th card
     grid.classList.add(`count-${cardsToReveal.length}`);
     
-    // Create slots for the cards just earned
     let slots = cardsToReveal.map(name => ({ name, owned: true }));
 
     for (const slot of slots) {
-      let img = new Image(); // Use Image constructor for better loading
+      let img = new Image(); 
       img.className = "reveal-card-static";
       img.src = CARD_IMAGES[slot.name] || config.logo;
       if (slot.owned) {
@@ -245,57 +207,44 @@
     }
     stage.appendChild(grid);
 
-    // 3. Start Animation
     await revealOneByOne(cardsToReveal, grid);
     
-    // 4. Send Webengage event *after* everything is done
-    // Fire-and-forget
+    // Fire-and-forget event
     fetch('/.netlify/functions/send-card-event', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        email: userEmail,
-        customerName: customerName
-      })
-    }).catch(err => console.error("Fire-and-forget send-card-event failed:", err));
+      body: JSON.stringify({ email: userEmail, customerName: customerName })
+    }).catch(err => console.error("Event error:", err));
 
-    // 5. Show Redeem Button
     redeemBtn.style.display = "block";
     redeemBtn.style.opacity = "1";
   }
 
-  // Animation sequence
   async function revealOneByOne(uniqueCards, grid) {
     const delay = (ms) => new Promise(res => setTimeout(res, ms));
     for (let i = 0; i < uniqueCards.length; i++) {
       const cardName = uniqueCards[i];
-      const bigCard = new Image(); // Use Image constructor
+      const bigCard = new Image(); 
       bigCard.className = "reveal-card-big";
       bigCard.src = CARD_IMAGES[cardName] || "";
       stage.appendChild(bigCard);
       
       await delay(50); 
       bigCard.classList.add('is-revealing');
-      
-      await delay(1200); // Hold the big card
-      
+      await delay(1200); 
       bigCard.classList.add('is-hiding');
-      await delay(250); // Wait for shrink
+      await delay(250); 
       
       const gridCard = grid.querySelector(`.reveal-card-static[data-card-name="${cardName}"]`);
-      if (gridCard) {
-        gridCard.classList.add('pop-in');
-      }
+      if (gridCard) gridCard.classList.add('pop-in');
       
-      await delay(300); // Wait for pop-in
+      await delay(300); 
       bigCard.remove();
-      await delay(200); // Pause before next card
+      await delay(200); 
     }
   }
 
-  // --- Navigation ---
   redeemBtn.onclick = () => {
     window.location.href = `redeem.html?email=${encodeURIComponent(userEmail)}`;
   };
-
 })();
