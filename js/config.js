@@ -1,6 +1,6 @@
 // config.js: all card/product images, all tier products dynamic
 window.CR_CONFIG = {
-  logo: "https://email-editor-resources.s3.amazonaws.com/images/82618240/Logo.png",
+  logo: "https://email-editor-resources.s3.amazonaws.com/images/82618240/PBD%20REDEMTION%20PAGE/HEADERRRRRRRRRRRRRR%20%281%29.png",
   cards: {
     "LensWarden":  "https://email-editor-resources.s3.amazonaws.com/images/82618240/CARDS/LensWarden.png",
     "Device-Keeper": "https://email-editor-resources.s3.amazonaws.com/images/82618240/CARDS/Device-Keeper.png",
