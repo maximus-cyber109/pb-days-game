@@ -43,13 +43,14 @@ exports.handler = async (event, context) => {
         `searchCriteria[filter_groups][0][filters][0][condition_type]=eq`;
     } else {
       console.log('[Magento Fetch] Searching by Customer Email (Latest Order)');
+      // Simplified search criteria for reliability
       searchUrl = `${BASE_URL}/orders?` +
         `searchCriteria[filter_groups][0][filters][0][field]=customer_email&` +
-        `searchCriteria[filter_groups][0][filters][0][value]=${encodeURIComponent(email.toLowerCase())}&` +
+        `searchCriteria[filter_groups][0][filters][0][value]=${encodeURIComponent(email)}&` + 
         `searchCriteria[filter_groups][0][filters][0][condition_type]=eq&` +
-        `searchCriteria[sort_orders][0][field]=created_at&` +
-        `searchCriteria[sort_orders][0][direction]=DESC&` +
-        `searchCriteria[page_size]=1`;
+        `searchCriteria[sortOrders][0][field]=created_at&` + 
+        `searchCriteria[sortOrders][0][direction]=DESC&` +
+        `searchCriteria[pageSize]=1`; 
     }
     
     console.log(`[Magento Fetch] Fetching from: ${BASE_URL}/orders...`);
@@ -61,7 +62,7 @@ exports.handler = async (event, context) => {
         
         // Custom Headers for Firewall Whitelisting
         'User-Agent': 'PB_Netlify', 
-        'X-Source-App': 'Netlify',
+        'X-Source-App': 'GameOfCrowns',
         
         // ★★★ NEW SECRET HEADER ★★★
         'X-Netlify-Secret': 'X-PB-NetlifY2025-901AD7EE35110CCB445F3CA0EBEB1494'
@@ -71,12 +72,11 @@ exports.handler = async (event, context) => {
 
     console.log(`[Magento Fetch] Response Status: ${response.status}`);
 
-    const ord = (response.data.items && response.data.items.length > 0) 
-      ? response.data.items[0] 
-      : null;
+    const items = response.data.items || [];
+    const ord = items.length > 0 ? items[0] : null;
     
     if (!ord) {
-      console.warn(`[Magento Fetch] No order found for ${email} (OrderId: ${orderId})`);
+      console.warn(`[Magento Fetch] No order found for ${email} (OrderId: ${orderId}). Response items count: ${items.length}`);
       return { 
         statusCode: 404, 
         headers, 
@@ -85,7 +85,8 @@ exports.handler = async (event, context) => {
     }
 
     // VERIFICATION: Ensure the order belongs to the requested email
-    if (ord.customer_email && ord.customer_email.toLowerCase() !== email.toLowerCase()) {
+    // This is the critical security check you requested.
+    if (ord.customer_email && ord.customer_email.toLowerCase().trim() !== email.toLowerCase().trim()) {
         console.error(`[Magento Fetch] Security Mismatch! Order ${ord.increment_id} belongs to ${ord.customer_email}, but requested by ${email}`);
         return {
             statusCode: 403,
@@ -96,8 +97,8 @@ exports.handler = async (event, context) => {
 
     console.log(`[Magento Fetch] Order validated for ${ord.customer_email}. Increment ID: ${ord.increment_id}`);
 
-    const items = ord.items || [];
-    const skus = items.map(item => item.sku).filter(sku => sku);
+    const orderItems = ord.items || [];
+    const skus = orderItems.map(item => item.sku).filter(sku => sku);
 
     const customer_name = `${ord.customer_firstname || ''} ${ord.customer_lastname || ''}`.trim();
 
@@ -107,7 +108,7 @@ exports.handler = async (event, context) => {
       grand_total: ord.grand_total,
       created_at: ord.created_at,
       customer_name: customer_name,
-      items: items.map(i => ({ 
+      items: orderItems.map(i => ({ 
         sku: i.sku, 
         name: i.name || '', 
         qty: i.qty_ordered || 1, 
@@ -135,6 +136,7 @@ exports.handler = async (event, context) => {
     }
     if (error.response) {
         console.error(`[Magento Fetch] Upstream Status: ${error.response.status}`);
+        console.error(`[Magento Fetch] Upstream Data: ${JSON.stringify(error.response.data)}`);
     }
     
     let msg = error.response?.data?.message || error.message;
