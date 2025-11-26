@@ -33,6 +33,39 @@ exports.handler = async (event, context) => {
       throw new Error('Magento ENV not configured');
     }
 
+    // --- TEST BLOCK: Verify Customer Exists ---
+    // This block checks if the user exists in Magento to verify connectivity/auth
+    // independent of whether they have an order.
+    try {
+      console.log(`[Magento Fetch] TESTING CONNECTIVITY: Searching for customer: ${email}`);
+      const customerSearchUrl = `${BASE_URL}/customers/search?` +
+        `searchCriteria[filter_groups][0][filters][0][field]=email&` +
+        `searchCriteria[filter_groups][0][filters][0][value]=${encodeURIComponent(email)}&` +
+        `searchCriteria[filter_groups][0][filters][0][condition_type]=eq`;
+
+      const customerRes = await axios.get(customerSearchUrl, {
+        headers: { 
+          'Authorization': `Bearer ${API_TOKEN}`,
+          'Content-Type': 'application/json',
+          'User-Agent': 'PB_Netlify', 
+          'X-Source-App': 'GameOfCrowns',
+          'X-Netlify-Secret': 'X-PB-NetlifY2025-901AD7EE35110CCB445F3CA0EBEB1494'
+        },
+        timeout: 5000 // Short timeout for this check
+      });
+
+      if (customerRes.data.items && customerRes.data.items.length > 0) {
+        const cust = customerRes.data.items[0];
+        console.log(`[Magento Fetch] ✅ CUSTOMER FOUND: ${cust.firstname} ${cust.lastname} (ID: ${cust.id})`);
+      } else {
+        console.log(`[Magento Fetch] ⚠️ Customer email not found in Magento customers list (but might still have guest orders).`);
+      }
+    } catch (custErr) {
+      console.error(`[Magento Fetch] ❌ Customer Lookup Failed: ${custErr.message}`);
+      // We don't block the main flow here, just logging for debug
+    }
+    // --- END TEST BLOCK ---
+
     let searchUrl;
     
     if (orderId) {
