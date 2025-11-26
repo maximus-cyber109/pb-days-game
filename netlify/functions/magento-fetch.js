@@ -1,7 +1,5 @@
 const axios = require('axios');
 
-// This function's *only* job is to get order data.
-// NO Webengage, NO database logic.
 exports.handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -46,12 +44,21 @@ exports.handler = async (event, context) => {
         `searchCriteria[page_size]=1`;
     }
     
+    console.log(`Fetching Magento Order from: ${BASE_URL}/orders...`);
+
     const response = await axios.get(searchUrl, {
       headers: { 
         'Authorization': `Bearer ${API_TOKEN}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        
+        // Custom Headers for Firewall Whitelisting
+        'User-Agent': 'PB_Netlify', 
+        'X-Source-App': 'GameOfCrowns',
+        
+        // ★★★ NEW SECRET HEADER ★★★
+        'X-Netlify-Secret': 'X-PB-NetlifY2025-901AD7EE35110CCB445F3CA0EBEB1494'
       },
-      timeout: 9000 // 9 second timeout
+      timeout: 9000 
     });
 
     const ord = (response.data.items && response.data.items.length > 0) 
@@ -67,17 +74,7 @@ exports.handler = async (event, context) => {
     }
 
     const items = ord.items || [];
-    const skus = items
-      .map(item => item.sku)
-      .filter(sku => sku);
-
-    if (skus.length === 0) {
-      return { 
-        statusCode: 400, 
-        headers, 
-        body: JSON.stringify({ success: false, error: 'Order has no SKUs' }) 
-      };
-    }
+    const skus = items.map(item => item.sku).filter(sku => sku);
 
     const customer_name = `${ord.customer_firstname || ''} ${ord.customer_lastname || ''}`.trim();
 
@@ -108,6 +105,10 @@ exports.handler = async (event, context) => {
 
   } catch (error) {
     console.error('Error in magento-fetch:', error.message);
+    if (error.response && error.response.status === 403) {
+        console.error('Magento 403 Response Data:', JSON.stringify(error.response.data));
+    }
+    
     let msg = error.response?.data?.message || error.message;
     return { 
       statusCode: error.response?.status || 500, 
